@@ -1,0 +1,33 @@
+
+---------------------------------------------------------
+NODE START AND AUTH
+---------------------------------------------------------
+
+alt has CA addr in config
+	NodeA -> CA: get CA certificates
+    NodeA -> CA: get sessions key
+else no configured CA
+	NodeA -> NodeA: find and load auth bundle
+end
+
+NodeA ->> NodeB: echo operation call
+activate NodeB
+	NodeB -> NodeB: check auth ticket
+    NodeB -> NodeA: request auth
+    activate NodeA
+    	NodeA -> NodeA: sign data by private key
+        NodeA --> NodeB: node cert and signed data
+    deactivate NodeA
+	NodeB -> NodeB: check auth and sign ticket
+	NodeB -> NodeA: auth ticket
+    NodeB --> NodeA: return
+deactivate NodeB
+
+NodeA -> NodeB: some operation
+NodeB -> NodeB: check auth ticket
+NodeB -> NodeB: perform operation
+NodeB --> NodeA: return result
+
+
+
+
