@@ -62,7 +62,7 @@ def setup_user():
     if USER_NAME in data:
         print('User %s is already exists in system'%USER_NAME)
     else:
-        ret = os.system('useradd -m %s'%USER_NAME)
+        ret = os.system('sudo useradd -m %s'%USER_NAME)
         if ret:
             print('ERROR! Can not create user %s'%USER_NAME)
             sys.exit(1)
@@ -71,13 +71,13 @@ def setup_user():
     if USER_NAME in data:
         print('Group %s is already exists in system'%USER_NAME)
     else:
-        ret = os.system('groupadd %s'%USER_NAME)
+        ret = os.system('sudo groupadd %s'%USER_NAME)
         if ret:
             print('ERROR! Can not create user group %s'%USER_NAME)
             sys.exit(1)
 
-    os.system('usermod -a -G %s %s'%(USER_NAME, USER_NAME))
-    os.system('usermod -a -G wheel %s'%(USER_NAME,))
+    os.system('sudo usermod -a -G %s %s'%(USER_NAME, USER_NAME))
+    os.system('sudo usermod -a -G wheel %s'%(USER_NAME,))
 
     
 
