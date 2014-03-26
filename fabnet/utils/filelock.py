@@ -1,73 +1,104 @@
+#!/usr/bin/python
+"""
+Copyright (C) 2013 Konstantin Andrusenko
+    See the documentation for further information on copyrights,
+    or contact the author. All Rights Reserved.
 
-__all__ = [
-    "lock",
-    "unlock",
-    "LOCK_EX",
-    "LOCK_SH",
-    "LOCK_NB",
-    "LockException",
-]
+@package fabnet.utils.filelock
+@author Konstantin Andrusenko
+@date June 26, 2013
+"""
 
 import os
+import fcntl
+
+LOCK_EX = fcntl.LOCK_EX
+LOCK_SH = fcntl.LOCK_SH
+LOCK_NB = fcntl.LOCK_NB
 
 class LockException(Exception):
     # Error codes:
     LOCK_FAILED = 1
 
-if os.name == 'nt':
-    import win32con
-    import win32file
-    import pywintypes
-    LOCK_EX = win32con.LOCKFILE_EXCLUSIVE_LOCK
-    LOCK_SH = 0 # the default
-    LOCK_NB = win32con.LOCKFILE_FAIL_IMMEDIATELY
-    # is there any reason not to reuse the following structure?
-    __overlapped = pywintypes.OVERLAPPED()
+class AlreadyExists(Exception):
+    def __init__(self, path):
+        Exception.__init__(self)
+        self.path = path
 
-    def lock(file, flags):
-        hfile = win32file._get_osfhandle(file.fileno())
-        try:
-            win32file.LockFileEx(hfile, flags, 0, -0x10000, __overlapped)
-        except pywintypes.error, exc_value:
-            # error: (33, 'LockFileEx', 'The process cannot access the file because another process has locked a portion of the file.')
-            if exc_value[0] == 33:
-                raise LockException(LockException.LOCK_FAILED, exc_value[2])
-            else:
-                # Q:  Are there exceptions/codes we should be dealing with here?
-                raise
-    
-    def unlock(file):
-        hfile = win32file._get_osfhandle(file.fileno())
-        try:
-            win32file.UnlockFileEx(hfile, 0, -0x10000, __overlapped)
-        except pywintypes.error, exc_value:
-            if exc_value[0] == 158:
-                # error: (158, 'UnlockFileEx', 'The segment is already unlocked.')
-                # To match the 'posix' implementation, silently ignore this error
-                pass
-            else:
-                # Q:  Are there exceptions/codes we should be dealing with here?
-                raise
+    def __repr__(self):
+        return 'File %s is already exists!'%self.path
 
-elif os.name == 'posix':
-    import fcntl
-    LOCK_EX = fcntl.LOCK_EX
-    LOCK_SH = fcntl.LOCK_SH
-    LOCK_NB = fcntl.LOCK_NB
+    def __str__(self):
+        return self.__repr__()
 
-    def lock(file, flags):
+
+def lock(file, flags):
+    try:
+        fcntl.flock(file.fileno(), flags)
+    except IOError, exc_value:
+        #  IOError: [Errno 11] Resource temporarily unavailable
+        if exc_value[0] == 11:
+            raise LockException(LockException.LOCK_FAILED, exc_value[1])
+        else:
+            raise
+
+def unlock(file):
+    fcntl.flock(file.fileno(), fcntl.LOCK_UN)
+
+
+class LockedFile:
+    def __init__(self, file_path, exclusive=False, new_file=False):
+        self.__fpath = file_path
+        self.__fd = None
+        if exclusive:
+            lock_type = LOCK_EX
+        else:
+            lock_type = LOCK_SH
+
+        self.__open(lock_type, new_file)
+
+    def __open(self, lock_type, create=False):
+        if create:
+            if os.path.exists(self.__fpath):
+                raise AlreadyExists(self.__fpath)
+
+            try:
+                self.__fd = os.open(self.__fpath, os.O_CREAT|os.O_EXCL|os.O_RDWR)
+            except OSError, err:
+                if err[0] == 17: #[Errno 17] File exists
+                    raise AlreadyExists(self.__fpath)
+                else:
+                    raise
+        else:
+            self.__fd = os.open(self.__fpath, os.O_RDWR)
+
         try:
-            fcntl.flock(file.fileno(), flags)
+            fcntl.flock(self.__fd, lock_type)
         except IOError, exc_value:
             #  IOError: [Errno 11] Resource temporarily unavailable
             if exc_value[0] == 11:
                 raise LockException(LockException.LOCK_FAILED, exc_value[1])
             else:
                 raise
-    
-    def unlock(file):
-        fcntl.flock(file.fileno(), fcntl.LOCK_UN)
-else:
-    raise Exception('Unsupported file lock/unlock at OS=%s'%os.name)
 
+    def write(self, data):
+        os.write(self.__fd, data)
+
+    def append(self, data):
+        os.lseek(self.__fd, 0, os.SEEK_END) #go to end of file
+        os.write(self.__fd, data)
+
+    def read(self, rlen=None):
+        if rlen is None:
+            rlen = os.path.getsize(self.__fpath)
+        return os.read(self.__fd, rlen)
+
+    def seek(self, pos=0, how=0):
+        os.fsync(self.__fd)
+        os.lseek(self.__fd, pos, how)
+
+    def close(self):
+        if self.__fd:
+            os.close(self.__fd)
+            self.__fd = None
 
