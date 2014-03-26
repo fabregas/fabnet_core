@@ -8,6 +8,10 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 if __name__ == '__main__':
+    check_deps({GENTOO: ('pyyaml', 'm2crypto', 'python-daemon'), \
+            RHEL: ('python-yaml', 'm2crypto', 'python-daemon'), \
+            DEBIAN: ('python-yaml', 'python-m2crypto', 'python-daemon')})
+
     prepare_install('/opt/blik/fabnet', '/opt/blik/fabnet/fabnet_package_files.lst')
 
     setup(
@@ -17,7 +21,7 @@ if __name__ == '__main__':
         author_email = "kksstt@gmail.com",
         description = ("Fabnet network core."),
         license = "CC BY-NC",
-        url = "https://github.com/fabregas/fabnet/wiki",
+        url = "https://github.com/fabregas/fabnet_core/wiki",
         packages= find_packages('.'),
         package_dir={'fabnet': 'fabnet'},
         scripts=get_all('./fabnet/bin'),
