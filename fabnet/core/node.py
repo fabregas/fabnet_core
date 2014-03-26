@@ -16,7 +16,7 @@ import threading
 
 from fabnet.core.fri_server import FriServer
 from fabnet.core.fri_client import FriClient
-from fabnet.settings import OPERATORS_MAP, DEFAULT_OPERATOR
+from fabnet.core.operator import Operator
 from fabnet.core.fri_base import FabnetPacketRequest
 from fabnet.core.key_storage import init_keystore
 from fabnet.core.operator import OperatorProcess, OperatorClient
@@ -26,12 +26,13 @@ from fabnet.core.workers_manager import WorkersManager
 from fabnet.core.constants import ET_INFO, STAT_OSPROC_TIMEOUT
 from fabnet.core.statistic import OSProcessesStatisticCollector
 from fabnet.utils.logger import core_logger as logger
+from fabnet.utils.plugins import PluginsManager
 
 
 class Node:
     def __init__(self, hostname, port, home_dir, node_name='anonymous_node',
                     ks_path=None, ks_passwd=None, node_type=None,
-                    bind_host='0.0.0.0', config={}):
+                    bind_host='0.0.0.0', config={}, plugins_config=''):
         self.hostname = hostname
         self.bind_host = bind_host
         self.port = port
@@ -51,6 +52,10 @@ class Node:
         cur_thread = threading.current_thread()
         cur_thread.setName('%s-main'%self.node_name)
 
+        self.operators_map = {'BASE': Operator}
+        self.operators_map.update( PluginsManager(plugins_config).get_operators() )
+
+
     def start(self, neighbour):
         address = '%s:%s' % (self.hostname, self.port)
         if not neighbour:
@@ -58,7 +63,7 @@ class Node:
         else:
             is_init_node = False
 
-        operator_class = OPERATORS_MAP.get(self.node_type, None)
+        operator_class = self.operators_map.get(self.node_type, None)
         if operator_class is None:
             logger.error('Node type "%s" does not found!'%self.node_type)
             return False
