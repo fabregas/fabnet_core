@@ -1,0 +1,38 @@
+
+import sys
+from fabnet.utils.safe_json_file import SafeJsonFile
+
+f_path = sys.argv[1]
+out_path = sys.argv[2]
+
+db = SafeJsonFile(f_path)
+nodes = db.read()
+rows = []
+for node, values in nodes.items():
+    if values.get('old_data', 0) != 0:
+        continue
+    rows.append((node, values['node_name'], values['superiors'], values['uppers']))
+
+i = 1
+out = open(out_path, 'w')
+nodes = {}
+for node in rows:
+    out.write('%i %s\n'%(i, node[1]))
+    nodes[i] = node
+    i += 1
+
+out.write('#\n')
+
+for i, node in nodes.items():
+    for neigbour in node[2]:
+        n_i = None
+        for j, no in nodes.items():
+            if no[0] == neigbour:
+                n_i = j
+                break
+        if n_i is None:
+            raise Exception('Node %s does not found!'%neigbour)
+
+        out.write('%i %i\n'%(i, n_i))
+
+out.close()
