@@ -23,10 +23,11 @@ from fabnet.core.operator import OperatorProcess, OperatorClient
 from fabnet.core.operations_processor import OperationsProcessor
 from fabnet.core.operations_manager import OperationsManager
 from fabnet.core.workers_manager import WorkersManager
-from fabnet.core.constants import ET_INFO, STAT_OSPROC_TIMEOUT
+from fabnet.core.constants import ET_INFO, STAT_OSPROC_TIMEOUT, CONFIG_FILE_NAME
 from fabnet.core.statistic import OSProcessesStatisticCollector
 from fabnet.utils.logger import core_logger as logger
 from fabnet.utils.plugins import PluginsManager
+from fabnet.core.config import Config
 
 
 class Node:
@@ -40,6 +41,11 @@ class Node:
         self.node_name = node_name
         self.node_type = node_type
         self.config = config
+
+        config_file = os.path.join(home_dir, CONFIG_FILE_NAME)
+        Config.load(config_file)
+        self.config.update(Config.get_config_dict())
+
         self.oper_client = OperatorClient(self.node_name)
         if ks_path:
             self.keystore = init_keystore(ks_path, ks_passwd)

@@ -90,3 +90,5 @@ STAT_OSPROC_TIMEOUT = 20
 SO_OPERS_TIME = 'OperationsProcTime'
 SI_SYS_INFO = 'SystemInfo'
 SI_BASE_INFO = 'BaseInfo'
+
+CONFIG_FILE_NAME = 'fabnet.conf'

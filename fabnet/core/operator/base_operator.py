@@ -68,8 +68,6 @@ class Operator:
 
     def __init__(self, self_address, home_dir='/tmp/', key_storage=None, \
                     is_init_node=False, node_name='unknown-node', config={}):
-        config_file = os.path.join(home_dir, 'node_config')
-        Config.load(config_file)
         self.update_config(config)
         self.msg_container = MessageContainer(MC_SIZE)
 
