@@ -18,18 +18,16 @@ DEFAULT_HOME = os.path.abspath(os.path.join(os.environ.get('HOME', '/tmp'), 'fab
 
 
 def usage():
-    print('Usage: node-daemon init-config')
+    print('Usage: node-daemon init-config <node addr> <node name> <node type>')
     print('           or')
-    print('       node-daemon start [<neighbour node>[:port]|init-fabnet <node addr> <node name> <node type>]')
-    print('           or')
-    print('       node-daemon reload')
+    print('       node-daemon start  <neighbour node> | init-fabnet')
     print('           or')
     print('       node-daemon stop')
     print('           or')
     print('       node-daemon status')
     print('\n   You can redefine following environment variables: FABNET_NODE_HOME')
-    print('   Node init config is saving to $FABNET_NODE_HOME/node_config file')
-    print('   If you want start secured fabnet node, home directory should contain key storage file named in format *.ks')
+    print('   Node configuration is saving to $FABNET_NODE_HOME/fabnet.conf file')
+    print('   If you want to start secured fabnet node, home directory should contain key storage file named in format *.ks')
 
 
 def stop_node(PID_FILE):
@@ -134,23 +132,22 @@ def get_init_config(home_dir):
     hostname = socket.gethostname()
     config = {'FABNET_NODE_HOST': hostname,
               'FABNET_NODE_PORT': DEFAULT_PORT,
-              'FIRST_NEIGHBOUR': 'init-fabnet',
               'NODE_NAME': hostname,
               'NODE_TYPE': None}
 
-    config_file = os.path.join(home_dir, 'node_config')
+    config_file = os.path.join(home_dir, 'fabnet.conf')
     if os.path.exists(config_file): 
         Config.load(config_file)
-        config.update(Config.get_config_dict('init', {}))
+        config.update(Config.get_config_dict())
     return config
             
 
 def save_init_config(home_dir, config):
-    config_file = os.path.join(home_dir, 'node_config')
+    config_file = os.path.join(home_dir, 'fabnet.conf')
     Config.load(config_file)
 
     try:
-        Config.update_config(config, 'init')
+        Config.update_config(config)
     except IOError, err:
         sys.stderr.write('Init config can not be created! Details: %s\n'%err)
         sys.exit(3)
@@ -171,55 +168,48 @@ def main(argv):
         else:
             input_pwd = False
 
-        if (config['NODE_TYPE'] is None and len(argv) < 6) or len(argv) > 6:
+        if len(argv) < 3:
             usage()
             sys.exit(1)
-
-        if len(argv) == 6:
-            config['FIRST_NEIGHBOUR'] = argv[2]
-            node_address = argv[3]
-            config['NODE_NAME'] = argv[4]
-            config['NODE_TYPE'] = argv[5]
-
-            if ':' in node_address:
-                ip_addr, port = node_address.split(':')
-            else:
-                ip_addr, port = node_address, DEFAULT_PORT
-            config['FABNET_NODE_HOST'], config['FABNET_NODE_PORT'] = ip_addr, port
-            
 
         ip_addr = config['FABNET_NODE_HOST']
         port = config['FABNET_NODE_PORT']
         node_address = '%s:%s'%(ip_addr, port)
 
-        start_node(node_address, config['FIRST_NEIGHBOUR'], config['NODE_NAME'], \
+        start_node(node_address, argv[2], config['NODE_NAME'], \
                 home_dir, config['NODE_TYPE'], PID_FILE, input_pwd)
         save_init_config(home_dir, config)
     elif argv[1] == 'stop':
         stop_node(PID_FILE)
-    elif argv[1] == 'reload':
-        if not os.path.exists(PID_FILE):
-            sys.stderr.write('No pid file found at %s\n'%PID_FILE)
-            sys.exit(1)
-
-        config = get_init_config(home_dir)
-        if config['NODE_TYPE'] is None:
-            sys.stderr.write('Invalid node config at %s\n'%home_dir)
-            sys.exit(1)
-
-        stop_node(PID_FILE)
-
-        cmd = ['', 'start'] 
-        if '--input-pwd' in argv:
-            cmd.append('--input-pwd')
-        main(cmd)
     elif argv[1] == 'status':
         if is_node_started(PID_FILE):
             print ('Fabnet node is started!')
         else:
             print ('Fabnet node is stopped!')
     elif argv[1] == 'init-config':
-        config = get_init_config(home_dir)
+        if len(argv) != 5:
+            usage()
+            sys.exit(1)
+            
+
+        config_file = os.path.join(home_dir, 'fabnet.conf')
+        if os.path.exists(config_file):
+            sys.stderr.write('Configuration file is already exists in %s!\n'%config_file)
+            sys.exit(1)
+
+        parts = argv[2].split(':')
+        if len(parts) == 2:
+            hostname = parts[0]
+            port = parts[1]
+        else:
+            hostname = argv[2]
+            port = DEFAULT_PORT
+
+        config = {'FABNET_NODE_HOST': hostname,
+                  'FABNET_NODE_PORT': port,
+                  'NODE_NAME': argv[3],
+                  'NODE_TYPE': argv[4]}
+        
         save_init_config(home_dir, config)
         print 'init config is saved to %s'%home_dir
     else:

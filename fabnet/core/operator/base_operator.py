@@ -70,7 +70,7 @@ class Operator:
                     is_init_node=False, node_name='unknown-node', config={}):
         config_file = os.path.join(home_dir, 'node_config')
         Config.load(config_file)
-        self.update_config(config, self.OPTYPE)
+        self.update_config(config)
         self.msg_container = MessageContainer(MC_SIZE)
 
         self.__lock = threading.RLock()
@@ -194,8 +194,8 @@ class Operator:
             return True
         return False
 
-    def update_config(self, config, section=None):
-        Config.update_config(config, section=section)
+    def update_config(self, config):
+        Config.update_config(config)
 
     def get_config(self):
         return Config.get_config_dict()

@@ -18,22 +18,10 @@ class ConfigAttrs(type):
     __config_file = None
 
     @classmethod
-    def update_config(cls, new_config, section=None, nosave=False):
+    def update_config(cls, new_config, nosave=False):
         cls.__lock.acquire()
         try:
-            if section:
-                conf = cls.__params.get(section, {})
-                conf.update(new_config)
-                cls.__params[section] = conf
-            else:
-                for key, value in new_config.items():
-                    if not isinstance(value, dict):
-                        raise Exception('Invalid config structure at %s'%key)
-                    if key in cls.__params:
-                        cls.__params[key].update(value)
-                    else:
-                        cls.__params[key] = value
-
+            cls.__params.update(new_config)
 
             if not nosave:
                 cls.save()
@@ -41,11 +29,9 @@ class ConfigAttrs(type):
             cls.__lock.release()
 
     @classmethod
-    def get_config_dict(cls, section=None, default=None):
+    def get_config_dict(cls, default=None):
         cls.__lock.acquire()
         try:
-            if section:
-                return copy.copy(cls.__params.get(section, default))
             return copy.copy(cls.__params)
         finally:
             cls.__lock.release()
@@ -54,17 +40,10 @@ class ConfigAttrs(type):
         return cls.get(attr)
 
     @classmethod
-    def get(cls, attr, section=None):
+    def get(cls, attr):
         cls.__lock.acquire()
         try:
-            if section:
-                return cls.__params.get(section, {}).get(attr, None)
-            if attr in cls.__params:
-                return cls.__params[attr]
-            for section, config in cls.__params.items():
-                if isinstance(config, dict) and attr in config:
-                    return config[attr]
-            return None
+            return cls.__params.get(attr, None)
         finally:
             cls.__lock.release()
 
@@ -74,19 +53,29 @@ class ConfigAttrs(type):
         if not os.path.exists(config_file):
             return
 
-        import yaml
-        r_str = open(config_file).read()
-        data = yaml.load(r_str)
-        cls.update_config(data, nosave=True)
+        try:
+            gl = {}
+            lc = {}
+            execfile(config_file, gl, lc)
+        except Exception, err:
+            raise Exception('Invalid config file! %s'%err)
+
+        cls.update_config(lc, nosave=True)
 
     @classmethod
     def save(cls):
         if not cls.__config_file:
             return
 
-        import yaml 
-        r_str = yaml.dump(cls.__params, default_flow_style=False)
-        open(cls.__config_file, 'w').write(r_str)
+        cfg_str = ''
+        cls.__lock.acquire()
+        try:
+            for key, value in cls.__params.items():
+                cfg_str += "%s = '%s'\n"%(key, value)
+        finally:
+            cls.__lock.release()
+
+        open(cls.__config_file, 'w').write(cfg_str)
 
 
 class Config(object):
