@@ -33,7 +33,7 @@ from fabnet.core.config import Config
 class Node:
     def __init__(self, hostname, port, home_dir, node_name='anonymous_node',
                     ks_path=None, ks_passwd=None, node_type=None,
-                    bind_host='0.0.0.0', config={}, plugins_config=''):
+                    bind_host='0.0.0.0', config={}):
         self.hostname = hostname
         self.bind_host = bind_host
         self.port = port
@@ -59,7 +59,7 @@ class Node:
         cur_thread.setName('%s-main'%self.node_name)
 
         self.operators_map = {'BASE': Operator}
-        self.operators_map.update( PluginsManager(plugins_config).get_operators() )
+        self.operators_map.update( PluginsManager.get_operators() )
 
 
     def start(self, neighbour):
@@ -72,7 +72,7 @@ class Node:
         operator_class = self.operators_map.get(self.node_type, None)
         if operator_class is None:
             logger.error('Node type "%s" does not found!'%self.node_type)
-            return False
+            raise Exception('Node type "%s" does not found!'%self.node_type)
 
         op_proc = OperatorProcess(operator_class, address, self.home_dir, self.keystore, \
                                     is_init_node, self.node_name, config=self.config)

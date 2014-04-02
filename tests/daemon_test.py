@@ -13,7 +13,7 @@ from fabnet.core.fri_client import FriClient
 #logger.setLevel(logging.DEBUG)
 
 NODES = [('/tmp/node_daemon_test_01', '127.0.0.1:1984', 'test01', 'BASE'), \
-        ('/tmp/node_daemon_test_02', '127.0.0.1:1985', 'test02', 'BASE')]
+        ('/tmp/node_daemon_test_02', '127.0.0.1:1985', 'test02', 'TestNode')]
 
 DAEMON_BIN = os.path.abspath(os.path.join(os.path.dirname(__file__), '../fabnet/bin/node-daemon'))
 
@@ -60,7 +60,23 @@ class TestNodeDaemon(unittest.TestCase):
                 DAEMON_BIN, NODES[1][1], NODES[1][2], NODES[1][3]))
             self.assertEqual(ret, 0)
 
-            ret = os.system('FABNET_NODE_HOME="%s" %s start %s'%(NODES[1][0], DAEMON_BIN, NODES[0][1]))
+            test_operator_str = '''from fabnet.core.operator.base_operator import Operator
+class TestOperator(Operator):
+    OPTYPE = 'TestNode'
+
+    def __init__(self, self_address, home_dir='/tmp/', key_storage=None, \
+                    is_init_node=False, node_name='unknown-node', config={}):
+        Operator.__init__(self, self_address, home_dir, key_storage, is_init_node, node_name, config)
+        open('%s/test.out', 'w').write(node_name)
+''' % NODES[1][0]
+            plugins_conf = '''operators:
+    TestNode: test_operator.TestOperator'''
+
+            open('%s/test_operator.py'%NODES[1][0], 'w').write(test_operator_str)
+            open('%s/test_plugins_conf.yaml'%NODES[1][0], 'w').write(plugins_conf)
+
+            ret = os.system('FABNET_NODE_HOME="%s" PYTHONPATH="%s" FABNET_PLUGINS_CONF="%s/test_plugins_conf.yaml" %s start %s'\
+                    %(NODES[1][0], NODES[1][0], NODES[1][0], DAEMON_BIN, NODES[0][1]))
             self.assertEqual(ret, 0)
             second_started = True
 
@@ -79,6 +95,9 @@ class TestNodeDaemon(unittest.TestCase):
             self.assertEqual(resp.ret_parameters['uppers'], [NODES[1][1]])
             self.assertEqual(resp.ret_parameters['superiors'], [NODES[1][1]])
             print '\n', resp.ret_parameters, '\n'
+
+            self.assertTrue(os.path.exists('%s/test.out'%NODES[1][0]))
+            self.assertTrue(NODES[1][2] in open('%s/test.out'%NODES[1][0]).read())
         finally:
             ret = os.system('FABNET_NODE_HOME="%s" %s stop'%(NODES[0][0], DAEMON_BIN))
             self.assertEqual(ret, 0)

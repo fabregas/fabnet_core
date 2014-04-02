@@ -87,10 +87,7 @@ def start(args):
                 logger.error('Cant write pid file. Details: %s'%err)
 
             try:
-                plugins_config = os.path.abspath(os.path.join(os.path.dirname(__file__), '../fabnet_plugins.yaml')) 
-
-                fabnet_node = node.Node(hostname, port, home_dir, node_name, ks_path, ks_passwd, \
-                                    node_type, plugins_config=plugins_config)
+                fabnet_node = node.Node(hostname, port, home_dir, node_name, ks_path, ks_passwd, node_type)
                 fabnet_node.start(neighbour)
 
                 signal.signal(signal.SIGINT, stop)
