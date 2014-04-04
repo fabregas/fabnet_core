@@ -58,7 +58,7 @@ class Node:
         cur_thread = threading.current_thread()
         cur_thread.setName('%s-main'%self.node_name)
 
-        self.operators_map = {'BASE': Operator}
+        self.operators_map = {'base': Operator}
         self.operators_map.update( PluginsManager.get_operators() )
 
 
@@ -69,7 +69,7 @@ class Node:
         else:
             is_init_node = False
 
-        operator_class = self.operators_map.get(self.node_type, None)
+        operator_class = self.operators_map.get(self.node_type.lower(), None)
         if operator_class is None:
             logger.error('Node type "%s" does not found!'%self.node_type)
             raise Exception('Node type "%s" does not found!'%self.node_type)

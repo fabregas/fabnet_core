@@ -1,6 +1,8 @@
 import os
 import yaml
 
+from fabnet.utils.logger import logger
+
 '''example
 
 operators:
@@ -38,6 +40,7 @@ class PluginsManager:
     def get_operators(cls):
         plugins_config = cls.__get_plugins_config_file()
         if not os.path.exists(plugins_config):
+            logger.warning('Plugins configuration does not found in %s'%plugins_config)
             return {}
 
         operators = {}
@@ -51,6 +54,6 @@ class PluginsManager:
 
             exec('from %s import %s'%(module, obj))
 
-            operators[node_type] = eval(obj)
+            operators[node_type.lower()] = eval(obj)
         return operators
 
