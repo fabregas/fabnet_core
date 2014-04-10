@@ -40,10 +40,10 @@ class ConfigAttrs(type):
         return cls.get(attr)
 
     @classmethod
-    def get(cls, attr):
+    def get(cls, attr, default=None):
         cls.__lock.acquire()
         try:
-            return cls.__params.get(attr, None)
+            return cls.__params.get(attr, default)
         finally:
             cls.__lock.release()
 

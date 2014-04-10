@@ -81,6 +81,13 @@ class Operator:
         self.__upper_keep_alives = {}
         self.__superior_keep_alives = {}
 
+        self.start_datetime = datetime.now()
+        self.is_init_node = is_init_node
+        self.__session_manager = SessionsManager(home_dir)
+        self.__discovery = NeigboursDiscoveryRoutines(self)
+        self.__api_workers_mgr = None
+        self.__stat = Statistic()
+
         if key_storage:
             cert = key_storage.get_node_cert()
             ckey = key_storage.get_node_cert_key()
@@ -97,12 +104,6 @@ class Operator:
         self.__check_neighbours_thread.setName('%s-CheckNeighbours'%(node_name,))
         self.__check_neighbours_thread.start()
 
-        self.start_datetime = datetime.now()
-        self.is_init_node = is_init_node
-        self.__session_manager = SessionsManager(home_dir)
-        self.__discovery = NeigboursDiscoveryRoutines(self)
-        self.__api_workers_mgr = None
-        self.__stat = Statistic()
         init_oper_stat = {}
         for opclass in self.OPERATIONS_LIST:
             init_oper_stat[opclass.get_name()] = 0
