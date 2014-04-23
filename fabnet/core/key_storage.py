@@ -225,20 +225,23 @@ class KeyStorage:
 
     def verify_cert(self, cert_str):
         '''Verify certificate and return certificate role'''
-        cert = X509.load_cert_string(str(cert_str))
+        try:
+            cert = X509.load_cert_string(str(cert_str))
 
-        cert_end_dt = cert.get_not_after().get_datetime().utctimetuple()
-        if cert_end_dt < datetime.utcnow().utctimetuple():
-            raise InvalidCertificate('Certificate is out of date')
+            cert_end_dt = cert.get_not_after().get_datetime().utctimetuple()
+            if cert_end_dt < datetime.utcnow().utctimetuple():
+                raise InvalidCertificate('Certificate is out of date')
 
-        cert_type = cert.get_subject().OU
-        ca_cert = self.__CA_CERTS.get(cert_type, None)
-        if ca_cert is None:
-            raise InvalidCertificate('Unknown certificate type: %s'%cert_type)
+            cert_type = cert.get_subject().OU
+            ca_cert = self.__CA_CERTS.get(cert_type, None)
+            if ca_cert is None:
+                raise InvalidCertificate('Unknown certificate type: %s'%cert_type)
 
-        if not cert.verify(ca_cert.get_pubkey()):
-            raise InvalidCertificate('Certificate verification is failed!')
-        return ROLES_MAP.get(cert_type, cert_type)
+            if not cert.verify(ca_cert.get_pubkey()):
+                raise InvalidCertificate('Certificate verification is failed!')
+            return ROLES_MAP.get(cert_type, cert_type)
+        except Exception, err:
+            raise Exception('verify_cert error: %s'%err)
 
 
 def init_keystore(ks_path, passwd):
