@@ -99,13 +99,16 @@ class KeyStorage:
 
     @classmethod
     def autodetect_ca(cls, path):
+        ca_files = []
         for item in os.listdir(path):
             if not item.endswith('.ca'):
                 continue
             f_path = os.path.join(path, item)
             if not os.path.isfile(f_path):
                 continue
+            ca_files.append(f_path)
             cls.__read_ca_from_file(f_path)
+        return ca_files
 
     @classmethod
     def __read_ca_from_file(cls, f_path):

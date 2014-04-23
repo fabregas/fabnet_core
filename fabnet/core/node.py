@@ -49,7 +49,11 @@ class Node:
         self.oper_client = OperatorClient(self.node_name)
         if ks_path:
             self.keystore = init_keystore(ks_path, ks_passwd)
-            self.keystore.autodetect_ca()
+            ca_files = self.keystore.autodetect_ca(home_dir)
+            if ca_files:
+                logger.info('CA certificates detected at: %s'%(' '.join(ca_files),))
+            else:
+                logger.warning('No one CA certificate autodetected')
         else:
             self.keystore = None
 

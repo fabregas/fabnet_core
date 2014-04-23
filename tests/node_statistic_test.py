@@ -6,6 +6,7 @@ import threading
 import json
 import random
 from fabnet.core import constants
+from datetime import datetime
 constants.CHECK_NEIGHBOURS_TIMEOUT = 1
 constants.STAT_COLLECTOR_TIMEOUT = 1
 constants.STAT_OSPROC_TIMEOUT = 1
@@ -14,8 +15,11 @@ from fabnet.core.node import Node
 from fabnet.core.fri_client import FriClient
 from fabnet.core.operator import Operator
 from fabnet.utils.logger import logger
+from fabnet.core.key_storage import init_keystore
 
 logger.setLevel(logging.DEBUG)
+VALID_STORAGE = './tests/cert/test_keystorage.p12'
+PASSWD = 'node'
 
 class TestNodeStatistic(unittest.TestCase):
     def test_node(self):
@@ -23,8 +27,9 @@ class TestNodeStatistic(unittest.TestCase):
             server = None
             address = '127.0.0.1:1987'
 
+            os.system('cp ./tests/cert/test_certs.ca /tmp/')
             node = Node('127.0.0.1', 1987, '/tmp', 'node_stat_test',
-                        ks_path=None, ks_passwd=None, node_type='BASE')
+                        ks_path=VALID_STORAGE, ks_passwd=PASSWD, node_type='BASE')
             node.start(None)
             server = node
             time.sleep(1)
@@ -35,7 +40,11 @@ class TestNodeStatistic(unittest.TestCase):
                         'sync': True}
             packet_obj = FabnetPacketRequest(**packet)
 
-            client = FriClient()
+            key_storage = init_keystore(VALID_STORAGE, PASSWD)
+            cert = key_storage.cert()
+            ckey = key_storage.cert_key()
+            client = FriClient(True, cert, ckey)
+
             ret_packet = client.call_sync('127.0.0.1:1987', packet_obj)
             time.sleep(1.5)
             packet['parameters']['base_info'] = True
