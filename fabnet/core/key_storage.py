@@ -239,6 +239,6 @@ class KeyStorage:
 
 
 def init_keystore(ks_path, passwd):
-    if os.path.exists(ks_path):
+    if not os.path.exists(ks_path):
         raise Exception('Key storage does not found at %s'%ks_path)
     return KeyStorage(ks_path, passwd)

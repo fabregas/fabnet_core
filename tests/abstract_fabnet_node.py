@@ -14,7 +14,7 @@ from fabnet.core.fri_client import FriClient
 from fabnet.core.workers_manager import WorkersManager
 from fabnet.core.workers import ProcessBasedFriWorker, ThreadBasedFriWorker
 from fabnet.core.operations_processor import OperationsProcessor
-from fabnet.core.key_storage import KeyStorage
+from fabnet.core.key_storage import KeyStorage, init_keystore
 from fabnet.core.operations_manager import OperationsManager
 from datetime import datetime
 from multiprocessing import Process
@@ -212,7 +212,7 @@ class TestAbstractFabnetNode(unittest.TestCase):
 
     def test01_with_ssl(self):
         KeyStorage.install_ca_certs(CA_CERTS)
-        ks = KeyStorage(VALID_STORAGE, PASSWD)
+        ks = init_keystore(VALID_STORAGE, PASSWD)
         self.__defferent_calls(ks)
 
     def test02_with_invalid_ks(self):
