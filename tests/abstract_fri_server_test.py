@@ -13,14 +13,14 @@ from fabnet.core.fri_server import FriServer
 from fabnet.core.fri_client import FriClient
 from fabnet.core.workers_manager import WorkersManager
 from fabnet.core.workers import ProcessBasedFriWorker, ThreadBasedFriWorker
-from fabnet.core.key_storage import FileBasedKeyStorage
+from fabnet.core.key_storage import KeyStorage
 from fabnet.utils.logger import logger
 
 logger.setLevel(logging.DEBUG)
 
-VALID_STORAGE = './tests/cert/test_keystorage.zip'
-INVALID_STORAGE = './tests/cert/test_keystorage_invalid.zip'
-PASSWD = 'qwerty123'
+VALID_STORAGE = './tests/cert/test_keystorage.p12'
+INVALID_STORAGE = './tests/cert/test_keystorage_invalid.p12'
+PASSWD = 'node'
 
 def test_packet_process(packet_processor):
     fri_request = packet_processor.recv_packet()
@@ -76,10 +76,10 @@ class TestAbstractFriServer(unittest.TestCase):
         self.__start_server(MyProcessBasedFriProcessor, call_methods)
 
     def test01_workers_ssl(self):
-        ks = FileBasedKeyStorage(VALID_STORAGE, PASSWD)
+        ks = KeyStorage(VALID_STORAGE, PASSWD)
         def call_methods():
-            cert = ks.get_node_cert()
-            ckey = ks.get_node_cert_key()
+            cert = ks.cert()
+            ckey = ks.cert_key()
 
             fri_client = FriClient(bool(cert), cert, ckey)
 
@@ -127,12 +127,12 @@ class TestAbstractFriServer(unittest.TestCase):
         self.__start_server(MyProcessBasedFriProcessor, stress_routine)
 
     def test03_workers_ssl_spawn_stop(self):
-        ks = FileBasedKeyStorage(VALID_STORAGE, PASSWD)
+        ks = KeyStorage(VALID_STORAGE, PASSWD)
 
         def stress_routine():
             def call_method():
-                cert = ks.get_node_cert()
-                ckey = ks.get_node_cert_key()
+                cert = ks.cert()
+                ckey = ks.cert_key()
 
                 fri_client = FriClient(bool(cert), cert, ckey)
                 for i in xrange(1000):

@@ -49,6 +49,7 @@ class Node:
         self.oper_client = OperatorClient(self.node_name)
         if ks_path:
             self.keystore = init_keystore(ks_path, ks_passwd)
+            self.keystore.autodetect_ca()
         else:
             self.keystore = None
 
@@ -115,8 +116,8 @@ class Node:
                         'event_message': 'Goodbye, fabnet :(', 'event_provider': address}
             packet = FabnetPacketRequest(method='NotifyOperation', parameters=params, sender=None, multicast=True)
             if self.keystore:
-                cert = self.keystore.get_node_cert()
-                ckey = self.keystore.get_node_cert_key()
+                cert = self.keystore.cert()
+                ckey = self.keystore.cert_key()
             else:
                 cert = ckey = None
             fri_client = FriClient(bool(cert), cert, ckey)

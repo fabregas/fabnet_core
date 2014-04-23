@@ -10,7 +10,6 @@ from fabnet.core.fri_server import FriServer
 from fabnet.core.fri_client import FriClient
 from fabnet.core.workers_manager import WorkersManager
 from fabnet.core.workers import ProcessBasedFriWorker, ThreadBasedFriWorker
-from fabnet.core.key_storage import FileBasedKeyStorage
 from fabnet.utils.logger import logger
 from datetime import datetime
 from multiprocessing import Process

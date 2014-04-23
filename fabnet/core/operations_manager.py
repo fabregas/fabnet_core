@@ -33,8 +33,8 @@ class OperationsManager:
         home_dir = self.operator_cl.get_home_dir()
 
         if key_storage:
-            cert = key_storage.get_node_cert()
-            ckey = key_storage.get_node_cert_key()
+            cert = key_storage.cert()
+            ckey = key_storage.cert_key()
         else:
             cert = ckey = None
 

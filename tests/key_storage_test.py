@@ -14,29 +14,32 @@ import hashlib
 from fabnet.core.key_storage import *
 from fabnet.core.constants import NODE_ROLE, CLIENT_ROLE
 
-VALID_STORAGE = './tests/cert/test_keystorage.zip'
-INVALID_STORAGE = './tests/cert/test_keystorage_invalid.zip'
+VALID_STORAGE = './tests/cert/test_keystorage.p12'
+INVALID_STORAGE = './tests/cert/test_keystorage_invalid.p12'
+CA_CERTS = [open('./tests/cert/root_cert.pem').read(),\
+           open('./tests/cert/nodes_cert.pem').read()]
 
-PASSWD = 'qwerty123'
+PASSWD = 'node'
 
 class TestKeyStorage(unittest.TestCase):
     def test01_valid_storage(self):
-        ks = FileBasedKeyStorage(VALID_STORAGE, PASSWD)
-        inv_ks = FileBasedKeyStorage(INVALID_STORAGE, PASSWD)
+        ks = KeyStorage(VALID_STORAGE, PASSWD)
+        with self.assertRaises(InvalidPassword):
+            inv_ks = KeyStorage(INVALID_STORAGE, PASSWD+'rrr')
 
-        role = ks.verify_cert(ks.get_node_cert())
+        inv_ks = KeyStorage(INVALID_STORAGE, PASSWD)
+ 
+        with self.assertRaises(InvalidCertificate):
+            role = ks.verify_cert(ks.cert())
+
+        KeyStorage.install_ca_certs(CA_CERTS)
+        role = ks.verify_cert(ks.cert())
         self.assertEqual(role, NODE_ROLE)
 
-        try:
-            role = ks.verify_cert(inv_ks.get_node_cert())
-        except Exception, err:
-            pass
-        else:
-            raise Exception('should be exception in this case')
-
-        context = ks.get_node_context()
+        context = ks.get_ssl_context()
         self.assertNotEqual(context, None)
 
+        self.assertEqual(ks.cert_key(), 3)
 
 if __name__ == '__main__':
     unittest.main()

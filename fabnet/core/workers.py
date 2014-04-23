@@ -126,7 +126,7 @@ class ThreadBasedFriWorker(ThreadBasedAbstractWorker):
     def __init__(self, name, queue, key_storage=None):
         ThreadBasedAbstractWorker.__init__(self, name, queue)
         self._key_storage = key_storage
-        self._ssl_context = None if not self._key_storage else self._key_storage.get_node_context()
+        self._ssl_context = None if not self._key_storage else self._key_storage.get_ssl_context()
 
     def worker_routine(self, socket):
         if self._key_storage:
@@ -153,7 +153,7 @@ class ProcessBasedFriWorker(ProcessBasedAbstractWorker):
     def __init__(self, name, queue, key_storage=None):
         ProcessBasedAbstractWorker.__init__(self, name, queue)
         self._key_storage = key_storage
-        self._ssl_context = None if not self._key_storage else self._key_storage.get_node_context()
+        self._ssl_context = None if not self._key_storage else self._key_storage.get_ssl_context()
 
     def worker_routine(self, reduced_socket):
         fd = rebuild_handle(reduced_socket)

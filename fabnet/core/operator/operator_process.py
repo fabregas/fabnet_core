@@ -164,6 +164,8 @@ class OperatorProcess(mp.Process):
                 self.__queue.put(conn)
         except Exception, err:
             self.__status.value = S_ERROR
+            logger.write = logger.info
+            traceback.print_exc(file=logger)
             logger.error('OperatorProcess failed: %s'%err)
 
         try:

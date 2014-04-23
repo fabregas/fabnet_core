@@ -89,8 +89,8 @@ class Operator:
         self.__stat = Statistic()
 
         if key_storage:
-            cert = key_storage.get_node_cert()
-            ckey = key_storage.get_node_cert_key()
+            cert = key_storage.cert()
+            ckey = key_storage.cert_key()
         else:
             cert = ckey = None
         self.fri_client = FriClient(bool(cert), cert, ckey)

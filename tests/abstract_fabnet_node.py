@@ -14,7 +14,7 @@ from fabnet.core.fri_client import FriClient
 from fabnet.core.workers_manager import WorkersManager
 from fabnet.core.workers import ProcessBasedFriWorker, ThreadBasedFriWorker
 from fabnet.core.operations_processor import OperationsProcessor
-from fabnet.core.key_storage import FileBasedKeyStorage
+from fabnet.core.key_storage import KeyStorage
 from fabnet.core.operations_manager import OperationsManager
 from datetime import datetime
 from multiprocessing import Process
@@ -27,9 +27,11 @@ from fabnet.core.fri_base import RamBasedBinaryData
 from fabnet.core.constants import NODE_ROLE, CLIENT_ROLE, RC_PERMISSION_DENIED, RC_INVALID_CERT
 
 
-VALID_STORAGE = './tests/cert/test_keystorage.zip'
-INVALID_STORAGE = './tests/cert/test_keystorage_invalid.zip'
-PASSWD = 'qwerty123'
+VALID_STORAGE = './tests/cert/test_keystorage.p12'
+INVALID_STORAGE = './tests/cert/test_keystorage_invalid.p12'
+PASSWD = 'node'
+CA_CERTS = [open('./tests/cert/root_cert.pem').read(),\
+           open('./tests/cert/nodes_cert.pem').read()]
 
 class UnauthOper(OperationBase):
     NAME='unauth'
@@ -119,8 +121,8 @@ class TestAbstractFabnetNode(unittest.TestCase):
         fri_server, operator_proc = self.__start_node('testnode00', key_storage)
         try:
             if key_storage:
-                cert = key_storage.get_node_cert()
-                ckey = key_storage.get_node_cert_key()
+                cert = key_storage.cert()
+                ckey = key_storage.cert_key()
             else:
                 cert = ckey = None
 
@@ -209,16 +211,17 @@ class TestAbstractFabnetNode(unittest.TestCase):
         self.__defferent_calls()
 
     def test01_with_ssl(self):
-        ks = FileBasedKeyStorage(VALID_STORAGE, PASSWD)
+        KeyStorage.install_ca_certs(CA_CERTS)
+        ks = KeyStorage(VALID_STORAGE, PASSWD)
         self.__defferent_calls(ks)
 
     def test02_with_invalid_ks(self):
-        key_storage = FileBasedKeyStorage(INVALID_STORAGE, PASSWD)
+        key_storage = KeyStorage(INVALID_STORAGE, PASSWD)
         fri_server, operator_proc = self.__start_node('testnode00', key_storage)
         try:
             if key_storage:
-                cert = key_storage.get_node_cert()
-                ckey = key_storage.get_node_cert_key()
+                cert = key_storage.cert()
+                ckey = key_storage.cert_key()
             else:
                 cert = ckey = None
 
@@ -228,6 +231,7 @@ class TestAbstractFabnetNode(unittest.TestCase):
             resp = fri_client.call_sync('127.0.0.1:6666', FabnetPacketRequest(method='echo', \
                                         parameters={'message': 'hello, fabregas!'}))
             self.assertEqual(resp.ret_code, RC_INVALID_CERT, resp.ret_message)
+            self.assertEqual(resp.ret_message, 'Certificate verification is failed!')
         finally:
             fri_server.stop()
             operator_proc.stop()
