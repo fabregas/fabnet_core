@@ -99,12 +99,14 @@ def start(args):
             except Exception, err:
                 open(status_file, 'w').write('1\nInit fabnet node failed: %s'%err)
                 logger.error('init fabnet node error: %s'%err)
+                return 1
+            return 0
 
         if nodaemon:
-            main_routine()
+            sys.exit(main_routine())
         else:
             with daemon.DaemonContext():
-                main_routine()
+                sys.exit(main_routine())
     except Exception, err:
         logger.error('fabnet node error: %s. exit!'%err)
         stop(None, None)
