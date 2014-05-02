@@ -142,7 +142,7 @@ class KeyStorage:
             retcode, out = exec_openssl(['pkcs12', '-in', self.__path, '-out', \
                     tmp_file.name, '-password', 'stdin', '-nodes'], self.__pwd)
         except Exception, err:
-            raise InvalidPassword('Can not open key chain! Maybe pin-code is invalid!')
+            raise InvalidPassword('Can not open key chain! Maybe password is invalid!')
         finally:
             data = open(tmp_file.name).read()
             tmp_file.close()
