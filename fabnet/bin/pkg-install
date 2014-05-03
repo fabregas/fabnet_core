@@ -1,0 +1,279 @@
+#!/usr/bin/python
+import os
+import sys
+import json
+import zipfile
+import tempfile
+import urllib2
+import shutil
+from subprocess import Popen, PIPE
+from setuptools import setup, find_packages
+
+USER_NAME = 'fabnet'
+PACKAGES_PATH = '/opt/blik/fabnet/packages'
+PACKAGES_BIN_PATH = '/opt/blik/fabnet/bin'
+PACKAGES_INFO = '/opt/blik/fabnet/info_packages.json'
+DISTR_INFO_FILE = 'distribution.info'
+
+GENTOO = 'gentoo'
+RHEL = 'rhel'
+DEBIAN = 'deb'
+
+os.environ['PYTHONPATH'] = PACKAGES_PATH
+
+def get_all(path):
+    items = os.listdir(path)
+    return [os.path.join(path, item) for item in items]
+
+
+def get_cur_ver(distr_path):
+    ver_path = os.path.join(distr_path, 'VERSION')
+    if not os.path.exists(ver_path):
+        raise Exception('No VERSION file found at %s!'%distr_path)
+
+    ver = open(ver_path).read()
+    return ver.strip()
+
+
+def clear_empty_dir(path):
+    lst = os.listdir(path)
+    for item in lst:
+        n_path = os.path.join(path, item)
+        if os.path.isdir(n_path):
+            clear_empty_dir(n_path)
+
+    lst = os.listdir(path)
+    if not lst:
+        os.system('rm -rf %s'%path)
+        print ' -> removed empty dir %s'%path
+        return
+
+
+def remove_files(files_list):
+    for path in files_list:
+        if not os.path.isfile(path):
+            continue
+
+        try:
+            os.remove(path)
+            print ' -> removed old %s'%path
+        except Exception, err:
+            print 'Warning! file %s does not removed. %s'%(path, err)
+
+    clear_empty_dir(PACKAGES_PATH)
+
+
+def setup_user():
+    data = open('/etc/passwd').read()
+    if USER_NAME in data:
+        print('User %s is already exists in system'%USER_NAME)
+    else:
+        ret = os.system('sudo useradd -m %s'%USER_NAME)
+        if ret:
+            print('ERROR! Can not create user %s'%USER_NAME)
+            sys.exit(1)
+
+    data = open('/etc/group').read()
+    if USER_NAME in data:
+        print('Group %s is already exists in system'%USER_NAME)
+    else:
+        ret = os.system('sudo groupadd %s'%USER_NAME)
+        if ret:
+            print('ERROR! Can not create user group %s'%USER_NAME)
+            sys.exit(1)
+
+        os.system('sudo usermod -a -G %s %s'%(USER_NAME, USER_NAME))
+        os.system('sudo usermod -a -G wheel %s'%(USER_NAME,))
+
+    
+def update_user_profile():
+    profile_path = os.path.join('/home/%s'%USER_NAME, '.bashrc')
+    ins_data = 'export PYTHONPATH=$PYTHONPATH:%s'% PACKAGES_PATH
+    if os.path.exists(profile_path):
+        data = open(profile_path).read()
+        if ins_data in data:
+            print 'PYPTHONPATH is already installed correctly'
+            return
+    open(profile_path, 'a').write('\n%s\n'%ins_data)
+    os.system('chown %s:%s %s'%(USER_NAME, USER_NAME, profile_path))
+
+
+def get_linux_distr():
+    if os.path.exists('/usr/bin/emerge'):
+        return GENTOO, 'sudo emerge --update %s'
+    if os.path.exists('/usr/bin/yum'):
+        return RHEL, 'sudo yum update -y %s'
+    if os.path.exists('/usr/bin/apt-get'):
+        return DEBIAN, 'sudo apt-get install %s'
+    raise Exception('Unsupported linux distribution detected!')
+
+def check_deps(deps):
+    distr, cmd = get_linux_distr()
+    packages = deps.get(distr, [])
+    if not packages:
+        return
+    packages_str = ' '.join(packages)
+    print 'Install dependencies: %s'%packages_str
+    ret = os.system(cmd % packages_str)
+    if ret:
+        raise Exception('ERROR! Failed installation!')
+
+
+def load_install_info(dist_path):
+    path = os.path.join(dist_path, DISTR_INFO_FILE)
+    if not os.path.exists(path):
+        raise Exception('%s file does not found at %s'%(DISTR_INFO_FILE, dist_path))
+
+    gl = {}
+    lc = {}
+    try:
+        exec(open(path).read(), gl, lc)
+    except Exception, err:
+        raise Exception('Invalid %s file (%s)'%(DISTR_INFO_FILE, err))
+
+    name = lc.get('name', None)
+    if not name:
+        raise Exception('Name does not specified in %s file'%DISTR_INFO_FILE)
+
+    packages = lc.get('packages', None)
+    if not packages:
+        raise Exception('Packages does not specified in %s file'%DISTR_INFO_FILE)
+
+    if type(packages) != list:
+        raise Exception('Invalid packages definition in %s file'%DISTR_INFO_FILE)
+
+    bin_paths = lc.get('bin_paths', None)
+    bin_files = []
+    if bin_paths:
+        if type(bin_paths) != list:
+            bin_paths = [bin_paths]
+        for bin_path in bin_paths:
+            bin_files += get_all(bin_path)
+    return name, packages, bin_files, lc.get('dependencies', {}), lc.get('submodule', None)
+
+def copy_recursive(dist_path, path, ret_list):
+    f_path = os.path.join(dist_path, path)
+    dest = os.path.join(PACKAGES_PATH, path)
+    if os.path.isfile(f_path):
+        if f_path.endswith('.pyc') or f_path.endswith('.pyo'):
+            return
+        print ' -> copying %s'%dest
+        shutil.copy(f_path, dest)
+        ret_list.append(dest)
+    else:
+        if not os.path.exists(dest):
+            os.mkdir(dest)
+        f_list = os.listdir(f_path)
+        for item in f_list:
+            copy_recursive(dist_path, os.path.join(path, item), ret_list)
+
+def save_install_info(name, version, installed_files):
+    pack_info = {}
+    if os.path.exists(PACKAGES_INFO):
+        try:
+            pack_info = json.loads(open(PACKAGES_INFO).read())
+        except Exception, err:
+            print('Warning! Invalid file %s'%PACKAGES_INFO)
+
+    d_info = {'version': version, 'files': installed_files}
+    pack_info[name] = d_info
+    open(PACKAGES_INFO, 'w').write(json.dumps(pack_info))
+
+
+def remove_prev_version(name):
+    if not os.path.exists(PACKAGES_INFO):
+        return
+
+    try:
+        pack_info = json.loads(open(PACKAGES_INFO).read())
+    except Exception, err:
+        print('Warning! Invalid file %s'%PACKAGES_INFO)
+        return
+
+    d_info = pack_info.get(name, None)
+    if not d_info:
+        return
+
+    print('Package %s=%s found...'%(name, d_info['version']))
+    remove_files(d_info['files'])
+
+    del pack_info[name]
+    open(PACKAGES_INFO, 'w').write(json.dumps(pack_info))
+
+
+def install(dist_path):
+    if not os.access(PACKAGES_INFO, os.W_OK):
+        raise Exception('Permission denied to %s'%PACKAGES_INFO)
+
+    name, packages, scripts, deps, submodule = load_install_info(dist_path)
+    version = get_cur_ver(dist_path)
+
+    check_deps(deps)
+
+    if submodule:
+        print ('Installing %s ...'%submodule)
+        install_submodule(submodule)
+
+    print('Finding previous version ...')
+    remove_prev_version(name)
+
+    print('Installing packages ...')
+    installed_files = []
+    for package in packages:
+        copy_recursive(dist_path, package, installed_files)
+
+    print('Installing scripts ...')
+    for script in scripts:
+        dest = os.path.join(PACKAGES_BIN_PATH, os.path.basename(script))
+        print ' -> copying %s'%dest
+        shutil.copy(script, dest)
+        installed_files.append(dest)
+
+    print('Saving installation info ...')
+    save_install_info(name, version, installed_files)
+
+    setup_user()
+    update_user_profile()
+
+    print ('Done.')
+
+def install_submodule(submodule_path):
+    ret = os.system('python %s %s'%(__file__, submodule_path))
+    if ret:
+        raise Exception('ERROR! Failed submodule installation!')
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print('Usage: %s <distribution path>'%sys.argv[0])
+        sys.exit(1)
+
+    dist = sys.argv[1]
+    tmp_dir = ''
+    try:
+        if os.path.exists(dist):
+            if os.path.isfile(dist):
+                dist = os.path.dirname(dist)
+        elif dist.startswith('http'):
+            response = urllib2.urlopen(dist)
+            out = tempfile.NamedTemporaryFile()
+            out.write(response.read())
+            out.flush()
+            tmp_dir = tempfile.mkdtemp()
+            zip_file = zipfile.ZipFile(out.name)
+            zip_file.extractall(tmp_dir)
+            out.close()
+
+            dist = os.path.join(tmp_dir, os.listdir(tmp_dir)[0])
+        else:
+            raise Exception('Invalid path "%s"'%dist)
+
+        install(dist)
+    except Exception, err:
+        print('ERROR: %s'%err)
+        sys.exit(1)
+    finally:
+        if tmp_dir:
+            os.system('rm -rf %s'%tmp_dir)
+
+    sys.exit(0)
+ 

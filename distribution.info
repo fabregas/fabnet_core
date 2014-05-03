@@ -1,0 +1,13 @@
+
+name = 'fabnet-core'
+
+packages = ['fabnet']
+
+bin_paths = ['./fabnet/bin']
+
+dependencies = {'gentoo': ('pyyaml', 'm2crypto', 'python-daemon'),
+            'rhel': ('python-yaml', 'm2crypto', 'python-daemon'),
+            'deb': ('python-yaml', 'python-m2crypto', 'python-daemon')}
+
+#submodule = 'submodule path'
+

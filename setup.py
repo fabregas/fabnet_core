@@ -1,22 +1,14 @@
 import os
 import sys
-from subprocess import Popen, PIPE
 from setuptools import setup, find_packages
-from setup_routines import *
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 if __name__ == '__main__':
-    check_deps({GENTOO: ('pyyaml', 'm2crypto', 'python-daemon'), \
-            RHEL: ('python-yaml', 'm2crypto', 'python-daemon'), \
-            DEBIAN: ('python-yaml', 'python-m2crypto', 'python-daemon')})
-
-    prepare_install('/opt/blik/fabnet', '/opt/blik/fabnet/fabnet_package_files.lst')
-
     setup(
         name = "fabnet-core",
-        version = get_cur_ver(),
+        version = read('VERSION'),
         author = "Fabregas",
         author_email = "kksstt@gmail.com",
         description = ("Fabnet network core."),
@@ -24,8 +16,8 @@ if __name__ == '__main__':
         url = "https://github.com/fabregas/fabnet_core/wiki",
         packages= find_packages('.'),
         package_dir={'fabnet': 'fabnet'},
-        scripts=get_all('./fabnet/bin'),
+        scripts=['./fabnet/bin/node-daemon', './fabnet/bin/fabnet-node',
+                './fabnet/bin/fri-caller', './fabnet/bin/pkg-install'],
         long_description=read('README.md'),
     )
-    setup_user()
-    update_user_profile()
+

@@ -19,7 +19,7 @@ from fabnet.utils.exec_command import run_command_ex
 from fabnet.core.constants import ET_ALERT, NODE_ROLE
 
 GIT_HOME = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
-VERSION_FILE = os.path.join(GIT_HOME, 'version')
+VERSION_FILE = os.path.join(GIT_HOME, 'VERSION')
 
 class UpgradeNodeOperation(OperationBase):
     ROLES = [NODE_ROLE]
