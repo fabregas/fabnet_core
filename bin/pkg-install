@@ -151,7 +151,7 @@ def load_install_info(dist_path):
         if type(bin_paths) != list:
             bin_paths = [bin_paths]
         for bin_path in bin_paths:
-            bin_files += get_all(bin_path)
+            bin_files += get_all(os.path.join(dist_path, bin_path))
     return name, packages, bin_files, lc.get('dependencies', {}), lc.get('submodule', None)
 
 def copy_recursive(dist_path, path, ret_list):
