@@ -80,8 +80,8 @@ class UpgradeNodeOperation(OperationBase):
                 raise Exception('git pull failed: %s'%cerr)
 
             optype = self.operator.get_type()
-            ret, cout, cerr = run_command_ex(['./fabnet/bin/upgrade-node', optype])
-            f_upgrage_log.write('===> ./fabnet/bin/upgrade-node %s  finished with code %s\n'%(optype, ret))
+            ret, cout, cerr = run_command_ex(['./bin/upgrade-node', optype])
+            f_upgrage_log.write('===> ./bin/upgrade-node %s  finished with code %s\n'%(optype, ret))
             f_upgrage_log.write('===> stdout: \n%s'%cout)
             f_upgrage_log.write('===> stderr: \n%s'%cerr)
             if ret != 0:

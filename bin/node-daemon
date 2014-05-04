@@ -8,7 +8,7 @@ import socket
 import ConfigParser
 
 NODE_SCRIPT = os.path.abspath(os.path.join(os.path.dirname(__file__), 'fabnet-node'))
-PYPATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
+PYPATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 sys.path.insert(0, PYPATH)
 from fabnet.core.config import Config
@@ -28,7 +28,7 @@ def usage():
     print('       node-daemon status')
     print('\n   You can redefine following environment variables: FABNET_NODE_HOME')
     print('   Node configuration is saving to $FABNET_NODE_HOME/%s file'%CONFIG_FILE_NAME)
-    print('   If you want to start secured fabnet node, home directory should contain key storage file named in format *.ks')
+    print('   If you want to start secured fabnet node, home directory should contain key storage file named in format *.p12')
 
 
 def stop_node(PID_FILE):
@@ -70,7 +70,7 @@ def start_node(node_address, neighbour, node_name, home_dir, node_type, pid_file
 
     keystore = ''
     for fname in os.listdir(home_dir):
-        if fname.endswith('.ks'):
+        if fname.endswith('.p12'):
             keystore = os.path.join(home_dir, fname)
             break
 

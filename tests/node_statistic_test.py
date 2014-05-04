@@ -26,9 +26,12 @@ class TestNodeStatistic(unittest.TestCase):
         try:
             server = None
             address = '127.0.0.1:1987'
+            if os.path.exists('/tmp/test_node_stat'):
+                os.system('rm -rf /tmp/test_node_stat')
+            os.system('mkdir /tmp/test_node_stat')
 
-            os.system('cp ./tests/cert/test_certs.ca /tmp/')
-            node = Node('127.0.0.1', 1987, '/tmp', 'node_stat_test',
+            os.system('cp ./tests/cert/test_certs.ca /tmp/test_node_stat/')
+            node = Node('127.0.0.1', 1987, '/tmp/test_node_stat', 'node_stat_test',
                         ks_path=VALID_STORAGE, ks_passwd=PASSWD, node_type='BASE')
             node.start(None)
             server = node
@@ -55,7 +58,7 @@ class TestNodeStatistic(unittest.TestCase):
             self.assertEqual(ret_packet.ret_code, 0, ret_packet.ret_message)
             print json.dumps(ret_packet.ret_parameters)
             self.assertEqual(ret_packet.ret_parameters['BaseInfo']['node_name'], 'node_stat_test')
-            self.assertEqual(ret_packet.ret_parameters['BaseInfo']['home_dir'], '/tmp')
+            self.assertEqual(ret_packet.ret_parameters['BaseInfo']['home_dir'], '/tmp/test_node_stat')
             self.assertEqual(ret_packet.ret_parameters['BaseInfo']['node_types'], ['Base'])
             self.assertEqual(int(ret_packet.ret_parameters['NeighboursInfo']['uppers_balance']), -1)
             self.assertEqual(int(ret_packet.ret_parameters['NeighboursInfo']['superiors_balance']), -1)

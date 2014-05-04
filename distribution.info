@@ -3,7 +3,7 @@ name = 'fabnet-core'
 
 packages = ['fabnet']
 
-bin_paths = ['./fabnet/bin']
+bin_paths = ['./bin']
 
 dependencies = {'gentoo': ('pyyaml', 'm2crypto', 'python-daemon'),
             'rhel': ('python-yaml', 'm2crypto', 'python-daemon'),

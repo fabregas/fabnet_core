@@ -16,8 +16,8 @@ if __name__ == '__main__':
         url = "https://github.com/fabregas/fabnet_core/wiki",
         packages= find_packages('.'),
         package_dir={'fabnet': 'fabnet'},
-        scripts=['./fabnet/bin/node-daemon', './fabnet/bin/fabnet-node',
-                './fabnet/bin/fri-caller', './fabnet/bin/pkg-install'],
+        scripts=['./bin/node-daemon', './bin/fabnet-node',
+                './bin/fri-caller', './bin/pkg-install'],
         long_description=read('README.md'),
     )
 

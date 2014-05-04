@@ -15,7 +15,7 @@ from fabnet.core.fri_client import FriClient
 NODES = [('/tmp/node_daemon_test_01', '127.0.0.1:1984', 'test01', 'BASE'), \
         ('/tmp/node_daemon_test_02', '127.0.0.1:1985', 'test02', 'TestNode')]
 
-DAEMON_BIN = os.path.abspath(os.path.join(os.path.dirname(__file__), '../fabnet/bin/node-daemon'))
+DAEMON_BIN = os.path.abspath(os.path.join(os.path.dirname(__file__), '../bin/node-daemon'))
 
 
 class TestNodeDaemon(unittest.TestCase):

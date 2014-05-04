@@ -8,7 +8,7 @@ import logging
 import getpass
 import daemon
 
-PYPATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
+PYPATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 sys.path.insert(0, PYPATH)
 
 import fabnet

@@ -42,6 +42,9 @@ def clear_empty_dir(path):
         if os.path.isdir(n_path):
             clear_empty_dir(n_path)
 
+    if path in [PACKAGES_PATH, PACKAGES_BIN_PATH]:
+        return
+
     lst = os.listdir(path)
     if not lst:
         os.system('rm -rf %s'%path)
@@ -159,6 +162,7 @@ def copy_recursive(dist_path, path, ret_list):
             return
         print ' -> copying %s'%dest
         shutil.copy(f_path, dest)
+        os.chmod(dest, 0444)
         ret_list.append(dest)
     else:
         if not os.path.exists(dest):
@@ -202,8 +206,12 @@ def remove_prev_version(name):
 
 
 def install(dist_path):
-    if not os.access(PACKAGES_INFO, os.W_OK):
-        raise Exception('Permission denied to %s'%PACKAGES_INFO)
+    if not os.path.exists(PACKAGES_PATH):
+        os.makedirs(PACKAGES_PATH)
+    if not os.path.exists(PACKAGES_BIN_PATH):
+        os.makedirs(PACKAGES_BIN_PATH)
+    if not os.access(PACKAGES_PATH, os.W_OK):
+        raise Exception('Permission denied to %s'%PACKAGES_PATH)
 
     name, packages, scripts, deps, submodule = load_install_info(dist_path)
     version = get_cur_ver(dist_path)
@@ -227,6 +235,7 @@ def install(dist_path):
         dest = os.path.join(PACKAGES_BIN_PATH, os.path.basename(script))
         print ' -> copying %s'%dest
         shutil.copy(script, dest)
+        os.chmod(dest, 0555)
         installed_files.append(dest)
 
     print('Saving installation info ...')

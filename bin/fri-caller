@@ -4,7 +4,7 @@ import sys
 import json
 import getpass
 
-PYPATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
+PYPATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 sys.path.insert(0, PYPATH)
 
 from fabnet.core.fri_base import FabnetPacketRequest
