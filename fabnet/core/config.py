@@ -21,6 +21,9 @@ class ConfigAttrs(type):
     def update_config(cls, new_config, nosave=False):
         cls.__lock.acquire()
         try:
+            if not new_config:
+                return
+
             for key, value in new_config.items():
                 cls.__params[key.lower()] = value
 
