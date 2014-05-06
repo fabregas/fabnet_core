@@ -20,6 +20,7 @@ RHEL = 'rhel'
 DEBIAN = 'deb'
 
 os.environ['PYTHONPATH'] = PACKAGES_PATH
+sys.path.append(PACKAGES_PATH)
 
 def get_all(path):
     items = os.listdir(path)
@@ -152,7 +153,10 @@ def load_install_info(dist_path):
             bin_paths = [bin_paths]
         for bin_path in bin_paths:
             bin_files += get_all(os.path.join(dist_path, bin_path))
-    return name, packages, bin_files, lc.get('dependencies', {}), lc.get('submodule', None)
+    plugins_info = lc.get('plugins_info', {})
+    return name, packages, bin_files, lc.get('dependencies', {}),\
+                            lc.get('submodule', None), plugins_info
+
 
 def copy_recursive(dist_path, path, ret_list):
     f_path = os.path.join(dist_path, path)
@@ -204,6 +208,16 @@ def remove_prev_version(name):
     del pack_info[name]
     open(PACKAGES_INFO, 'w').write(json.dumps(pack_info))
 
+def update_plugins_info(plugins):
+    from fabnet.utils.plugins import PluginsManager
+    cfg_dir = os.path.dirname(PluginsManager.DEFAULT_CONFIG_PATH)
+    if not os.path.exists(cfg_dir):
+        os.makedirs(cfg_dir)
+        
+    os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0777)
+    for n_type, path in plugins.items():
+        PluginsManager.register_operator(n_type, path)
+    os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0444)
 
 def install(dist_path):
     if not os.path.exists(PACKAGES_PATH):
@@ -213,7 +227,7 @@ def install(dist_path):
     if not os.access(PACKAGES_PATH, os.W_OK):
         raise Exception('Permission denied to %s'%PACKAGES_PATH)
 
-    name, packages, scripts, deps, submodule = load_install_info(dist_path)
+    name, packages, scripts, deps, submodule, plugins = load_install_info(dist_path)
     version = get_cur_ver(dist_path)
 
     check_deps(deps)
@@ -237,6 +251,10 @@ def install(dist_path):
         shutil.copy(script, dest)
         os.chmod(dest, 0555)
         installed_files.append(dest)
+
+    if plugins:
+        print('Updating plugins info ...')
+        update_plugins_info(plugins)    
 
     print('Saving installation info ...')
     save_install_info(name, version, installed_files)

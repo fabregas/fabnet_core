@@ -21,7 +21,8 @@ class ConfigAttrs(type):
     def update_config(cls, new_config, nosave=False):
         cls.__lock.acquire()
         try:
-            cls.__params.update(new_config)
+            for key, value in new_config.items():
+                cls.__params[key.lower()] = value
 
             if not nosave:
                 cls.save()
@@ -36,14 +37,17 @@ class ConfigAttrs(type):
         finally:
             cls.__lock.release()
 
-    def __getattr__(cls, attr):
-        return cls.get(attr)
+    def __getattr__(self, attr):
+        return self.get(attr)
+
+    def __getitem__(self, attr):
+        return self.get(attr)
 
     @classmethod
     def get(cls, attr, default=None):
         cls.__lock.acquire()
         try:
-            return cls.__params.get(attr, default)
+            return cls.__params.get(attr.lower(), default)
         finally:
             cls.__lock.release()
 

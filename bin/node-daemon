@@ -8,9 +8,9 @@ import socket
 import ConfigParser
 
 NODE_SCRIPT = os.path.abspath(os.path.join(os.path.dirname(__file__), 'fabnet-node'))
-PYPATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+PYPATH = '/opt/blik/fabnet/packages'
 
-sys.path.insert(0, PYPATH)
+sys.path.append(PYPATH)
 from fabnet.core.config import Config
 from fabnet.core.constants import CONFIG_FILE_NAME
 
@@ -74,6 +74,11 @@ def start_node(node_address, neighbour, node_name, home_dir, node_type, pid_file
             keystore = os.path.join(home_dir, fname)
             break
 
+    if node_type is None:
+        sys.stderr.write('Node type does not specified!\n')
+        sys.exit(1)
+        
+
     print('starting fabnet node...')
     print(' => home directory: %s'%home_dir)
     print(' => node address: %s'%node_address)
@@ -89,7 +94,9 @@ def start_node(node_address, neighbour, node_name, home_dir, node_type, pid_file
     if keystore and input_pwd:
         cmd.append('--input-pwd')
 
-    sp = subprocess.Popen(cmd)
+    env = os.environ
+    env['PYTHONPATH'] = PYPATH
+    sp = subprocess.Popen(cmd, env=env)
     sp.communicate()
     rcode = wait_node_start(home_dir)
     if rcode:
@@ -135,12 +142,15 @@ def get_init_config(home_dir):
               'FABNET_NODE_PORT': DEFAULT_PORT,
               'NODE_NAME': hostname,
               'NODE_TYPE': None}
+    Config.update_config(config)
 
     config_file = os.path.join(home_dir, CONFIG_FILE_NAME)
     if os.path.exists(config_file): 
+        sys.stdout.write('Loading config from %s ...\n'%config_file)
         Config.load(config_file)
-        config.update(Config.get_config_dict())
-    return config
+    else:
+        sys.stdout.write('Config files %s does not found!\n'%config_file)
+    return Config
             
 
 def save_init_config(home_dir, config):

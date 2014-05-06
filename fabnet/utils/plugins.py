@@ -11,6 +11,7 @@ operators:
 '''
 
 class PluginsManager:
+    DEFAULT_CONFIG_PATH = '/opt/blik/fabnet/conf/fabnet_plugins.yaml'
     __config_path = None
 
     @classmethod
@@ -18,7 +19,7 @@ class PluginsManager:
         if cls.__config_path:
             return cls.__config_path
 
-        cls.__config_path = '/opt/blik/fabnet/conf/fabnet_plugins.yaml'
+        cls.__config_path = cls.DEFAULT_CONFIG_PATH
         if os.path.exists(os.path.join(os.path.dirname(__file__), '../../.git')): #test environment
             cls.__config_path = os.environ.get('FABNET_PLUGINS_CONF', cls.__config_path)
 
