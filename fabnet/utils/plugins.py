@@ -28,7 +28,10 @@ class PluginsManager:
     @classmethod
     def register_operator(cls, node_type, object_path):
         plugins_config = cls.__get_plugins_config_file()
-        data = yaml.load(open(plugins_config).read())
+        if os.path.exists(plugins_config):
+            data = yaml.load(open(plugins_config).read())
+        else:
+            data = {}
 
         operators = data.get('operators', {})
         operators[node_type] = object_path

@@ -214,7 +214,9 @@ def update_plugins_info(plugins):
     if not os.path.exists(cfg_dir):
         os.makedirs(cfg_dir)
         
-    os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0777)
+    if os.path.exists(PluginsManager.DEFAULT_CONFIG_PATH):
+        os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0777)
+
     for n_type, path in plugins.items():
         PluginsManager.register_operator(n_type, path)
     os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0444)
