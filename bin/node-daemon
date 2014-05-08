@@ -58,7 +58,7 @@ def stop_node(PID_FILE):
 def start_node(node_address, neighbour, node_name, home_dir, node_type, pid_file, input_pwd=False):
     if is_node_started(pid_file):
         print('fabnet node is already started!')
-        sys.exit(0)
+        sys.exit(11)
 
     home_dir = os.path.abspath(home_dir)
     if not os.path.exists(home_dir):
