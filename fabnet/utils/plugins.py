@@ -56,7 +56,11 @@ class PluginsManager:
             obj = parts[-1]
             module = '.'.join(parts[:-1])
 
-            exec('from %s import %s'%(module, obj))
+            try:
+                exec('from %s import %s'%(module, obj))
+            except Exception, err:
+                logger.error('Plugin %s loading error for node type %s. Details: %s'%(obj_path, node_type, err))
+                continue
 
             operators[node_type.lower()] = eval(obj)
         return operators

@@ -34,10 +34,10 @@ class TestNodeDaemon(unittest.TestCase):
         self.assertTrue(os.path.exists(config))
 
         data = open(config).read()
-        self.assertTrue("FABNET_NODE_HOST = '127.0.0.1'" in data)
-        self.assertTrue("FABNET_NODE_PORT = '1984'" in data)
-        self.assertTrue("NODE_NAME = 'test01'" in data)
-        self.assertTrue("NODE_TYPE = 'BASE'" in data)
+        self.assertTrue("fabnet_node_host = '127.0.0.1'" in data, data)
+        self.assertTrue("fabnet_node_port = '1984'" in data)
+        self.assertTrue("node_name = 'test01'" in data)
+        self.assertTrue("node_type = 'BASE'" in data)
 
         ret = os.system('FABNET_NODE_HOME="%s" %s start'%(NODES[0][0], DAEMON_BIN))
         self.assertNotEqual(ret, 0)

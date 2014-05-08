@@ -95,7 +95,7 @@ def start_node(node_address, neighbour, node_name, home_dir, node_type, pid_file
         cmd.append('--input-pwd')
 
     env = os.environ
-    env['PYTHONPATH'] = PYPATH
+    env['PYTHONPATH'] = '%s:%s'%(env.get('PYTHONPATH', '.'), PYPATH)
     sp = subprocess.Popen(cmd, env=env)
     sp.communicate()
     rcode = wait_node_start(home_dir)

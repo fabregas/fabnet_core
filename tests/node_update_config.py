@@ -41,8 +41,8 @@ class TestNodeUpdateConfig(unittest.TestCase):
             resp = fri_client.call_sync(address, packet_obj)
             self.assertEqual(resp.ret_code, 0, resp.ret_message)
 
-            self.assertEqual(resp.ret_parameters['TEST_CONFIG'], 'str')
-            self.assertEqual(resp.ret_parameters['TEST_INT'], 234)
+            self.assertEqual(resp.ret_parameters['test_config'], 'str')
+            self.assertEqual(resp.ret_parameters['test_int'], 234)
 
             time.sleep(.2)
         except Exception, err:
