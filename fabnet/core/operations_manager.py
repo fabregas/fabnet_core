@@ -131,7 +131,6 @@ class OperationsManager:
         """process callback fabnet packet
         @param packet - object of FabnetPacketResponse class
         """
-
         ret = self.operator_cl.register_callback(packet.message_id)
         if ret == RC_MESSAGE_ID_NOT_FOUND:
             raise Exception('MessageID does not found! Failed packet: %s'%packet)

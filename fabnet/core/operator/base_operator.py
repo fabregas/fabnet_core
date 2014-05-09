@@ -44,6 +44,8 @@ from fabnet.operations.upgrade_node_operation import UpgradeNodeOperation
 from fabnet.operations.notify_operation import NotifyOperation
 from fabnet.operations.update_node_config import UpdateNodeConfigOperation
 from fabnet.operations.get_node_config import GetNodeConfigOperation
+from fabnet.operations.topology_cognition import TOPOLOGY_DB
+from fabnet.utils.safe_json_file import SafeJsonFile
 
 from fabnet.operations.constants import NB_NORMAL, NB_MORE, NB_LESS, MNO_REMOVE
 
@@ -456,7 +458,9 @@ class Operator:
             if is_not_respond:
                 self.on_neigbour_not_respond(n_type, nodeaddr)
 
-        if remove_nodes or \
+        if len(uppers) == len(superiors) == 0:
+            self.try_find_neighbours()
+        elif remove_nodes or \
             (len(uppers) < ONE_DIRECT_NEIGHBOURS_COUNT) or \
             (len(superiors) < ONE_DIRECT_NEIGHBOURS_COUNT):
 
@@ -475,6 +479,9 @@ class Operator:
 
         if not from_address:
             from_address = self.self_address
+
+        if from_address != self.self_address:
+            self.register_request(packet.message_id, packet.method, None)
 
         return self.__call_operation(from_address, packet)
 
@@ -523,6 +530,36 @@ class Operator:
 
     def put_session(self, session_id, role):
         return self.__session_manager.append(session_id, role)
+    
+
+    def get_discovered_nodes(self):
+        '''
+        return nodes in following struct:
+            { node_addr:
+                { uppers: [addr, ...],
+                  superiors: [addr, ...]
+                }
+            ...
+            }
+        '''
+        db = os.path.join(self.home_dir, TOPOLOGY_DB)
+        if not os.path.exists(db):
+            return {}
+        db = SafeJsonFile(db)
+        nodes = db.read()
+        return nodes
+            
+    def try_find_neighbours(self):
+        logger.info('Trying to find neighbours...')
+        nodes = self.get_discovered_nodes()
+        for node in nodes:
+            if not self.is_node_alive(node):
+                logger.info('trying discovery network over %s node but it is not responding...'%node)
+                continue
+            logger.info('Node %s is alive. Try to communicate with it...'%node)
+            packet = FabnetPacketRequest(method='DiscoveryOperation', sender=self.self_address)
+            self.call_node(node, packet)
+            break
 
     def discovery_neighbours(self, neighbour):
         packet = FabnetPacketRequest(method='DiscoveryOperation', sender=self.self_address)
@@ -532,6 +569,7 @@ class Operator:
                 'event_message': 'Hello, fabnet!', 'event_provider': self.self_address}
         packet = FabnetPacketRequest(method='NotifyOperation', parameters=params)
         self.call_network(packet, neighbour)
+        self.__allow_check_neighbours.set()
 
     def start_discovery_process(self, node, uppers, superiors):
         self.__discovery_lock.acquire()
@@ -539,7 +577,6 @@ class Operator:
             return self.__discovery.discovery_nodes(node, uppers, superiors)
         finally:
             self.__discovery_lock.release()
-        self.__allow_check_neighbours.set()
 
     def process_manage_neighbours(self, n_type, operation, node_address, op_type, is_force):
         self.__discovery_lock.acquire()

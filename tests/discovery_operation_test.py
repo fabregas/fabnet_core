@@ -24,23 +24,26 @@ from fabnet.core.operator import OperatorClient
 NODES_COUNT = 5
 
 class TestServerThread(threading.Thread):
-    def __init__(self, port, neighbour=None):
+    def __init__(self, port, neighbour=None, create_home=True):
         threading.Thread.__init__(self)
         self.port = port
         self.stopped = True
         self.node = None
+        self.config = {'CHECK_NEIGHBOURS_TIMEOUT': 1}
+        self.recreate_home = create_home
         self.neighbour = neighbour
 
     def run(self):
         address = '127.0.0.1:%s'%self.port
         home_dir = '/tmp/node_%s'%self.port
-        if os.path.exists(home_dir):
-            os.system('rm -rf %s'%home_dir)
-        os.mkdir(home_dir)
+        if self.recreate_home:
+            if os.path.exists(home_dir):
+                os.system('rm -rf %s'%home_dir)
+            os.mkdir(home_dir)
         node_name = 'node%s'%self.port
 
         node = Node('127.0.0.1', self.port, home_dir, node_name,
-                    ks_path=None, ks_passwd=None, node_type='BASE')
+                    ks_path=None, ks_passwd=None, node_type='BASE', config=self.config)
 
         node.start(self.neighbour)
         self.node = node
@@ -157,6 +160,33 @@ class TestDiscoverytOperation(unittest.TestCase):
                 self.assertTrue(len(nodes[address]['uppers']) >= 2)
                 self.assertTrue(len(nodes[address]['superiors']) >= 2)
                 self.assertEqual(nodes[address]['node_name'], 'node%s'%i)
+
+
+            print '=================== autodiscovery test ================'
+            #autodiscovery
+            idx = 0
+            for i, server in enumerate(servers):
+                if ('127.0.0.1:%s'%server.port) == addr:
+                    idx = i
+                    break
+            server = servers[idx]
+            server.stop()
+            server.join()
+            time.sleep(1)
+            
+            port = server.port
+            server = TestServerThread(port, '127.0.0.1:11111', False) #host should be down
+            server.start()
+            servers.append(server)
+            time.sleep(2)
+            
+            fri_client = FriClient()
+            packet_obj = FabnetPacketRequest(method='NodeStatistic')
+            resp = fri_client.call_sync('127.0.0.1:%s'%port, packet_obj)
+            self.assertEqual(resp.ret_code, 0, resp.ret_message)
+            self.assertTrue(int(resp.ret_parameters['NeighboursInfo']['uppers_balance']) >= 0, resp.ret_parameters)
+            self.assertTrue(int(resp.ret_parameters['NeighboursInfo']['superiors_balance']) >= 0)
+
         finally:
             for server in servers:
                 if server:

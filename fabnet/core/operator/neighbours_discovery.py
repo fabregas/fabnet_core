@@ -12,8 +12,6 @@ This module contains the NeigboursDiscoveryRoutines class implementation
 """
 import os
 from fabnet.utils.logger import oper_logger as logger
-from fabnet.utils.safe_json_file import SafeJsonFile
-from fabnet.operations.topology_cognition import TOPOLOGY_DB
 from fabnet.operations.constants import MNO_APPEND, MNO_REMOVE
 from fabnet.core.constants import ONE_DIRECT_NEIGHBOURS_COUNT,\
                                         NT_SUPERIOR, NT_UPPER
@@ -189,7 +187,7 @@ class NeigboursDiscoveryRoutines:
             new_node = node
             break
 
-        d_nodes = self.get_discovered_nodes()
+        d_nodes = self.operator.get_discovered_nodes()
         if reinit:
             self.__discovered_nodes[n_type] = []
 
@@ -218,11 +216,10 @@ class NeigboursDiscoveryRoutines:
             return
 
         self.__discovered_nodes[n_type].append(new_node)
-
         if not self.operator.is_node_alive(new_node):
             #node is not alive...
             logger.warning('trying communacate with %s node but it is not responding...'%new_node)
-            return self._check_neighbours_count(n_type, neighbours, other_n_type, other_neighbours, ret_parameters, reinit)
+            return self._check_neighbours_count(n_type, neighbours, other_n_type, other_neighbours, ret_parameters, reinit=False)
 
         parameters = { 'neighbour_type': other_n_type, 'operation': MNO_APPEND,
                     'node_address': self.operator.self_address, 'operator_type': self.operator.OPTYPE }
@@ -286,14 +283,6 @@ class NeigboursDiscoveryRoutines:
             self.__cache[NT_UPPER] = []
             self.__cache[NT_SUPERIOR] = []
 
-
-    def get_discovered_nodes(self):
-        db = os.path.join(self.operator.home_dir, TOPOLOGY_DB)
-        if not os.path.exists(db):
-            return {}
-        db = SafeJsonFile(db)
-        nodes = db.read()
-        return nodes
 
     def smart_neighbours_rebalance(self, node_address, superior_neighbours, upper_neighbours):
         if node_address == self.operator.self_address:
