@@ -35,7 +35,7 @@ class ThreadBasedAbstractWorker(threading.Thread):
 
     def run(self):
         self.before_start()
-        logger.info('worker is started!')
+        logger.debug('worker is started!')
         while True:
             data = self.__queue.get()
             if data == STOP_WORKER_EVENT:
@@ -53,7 +53,7 @@ class ThreadBasedAbstractWorker(threading.Thread):
                 self.__busy_flag.clear()
 
         self.after_stop()
-        logger.info('worker is stopped!')
+        logger.debug('worker is stopped!')
 
     def worker_routine(self, data):
         """This method must be implemented in inherited class"""
@@ -89,7 +89,7 @@ class ProcessBasedAbstractWorker(mp.Process):
 
         self.before_start()
 
-        logger.info('worker is started!')
+        logger.debug('worker is started!')
         while True:
             data = self.__queue.get()
             if data == STOP_WORKER_EVENT:
@@ -107,7 +107,7 @@ class ProcessBasedAbstractWorker(mp.Process):
                 self.__is_busy.value = False
 
         self.after_stop()
-        logger.info('worker is stopped!')
+        logger.debug('worker is stopped!')
 
     def worker_routine(self, data):
         """This method must be implemented in inherited class"""

@@ -72,6 +72,7 @@ class Operator:
         self.msg_container = MessageContainer(MC_SIZE)
 
         self.__lock = threading.RLock()
+        self.__discovery_lock = threading.RLock()
         self.self_address = self_address
         self.home_dir = home_dir
         self.node_name = node_name
@@ -87,6 +88,7 @@ class Operator:
         self.__discovery = NeigboursDiscoveryRoutines(self)
         self.__api_workers_mgr = None
         self.__stat = Statistic()
+        self.__allow_check_neighbours = threading.Event()
 
         if key_storage:
             cert = key_storage.cert()
@@ -392,8 +394,17 @@ class Operator:
         self.rebalance_append({'neighbour_type': NT_SUPERIOR}, reinit_discovery=True)
         self.rebalance_append({'neighbour_type': NT_UPPER}, reinit_discovery=True)
 
+    def is_node_alive(self, nodeaddr):
+        ka_packet = FabnetPacketRequest(method=KEEP_ALIVE_METHOD, sender=self.self_address, sync=True)
+        resp = self.fri_client.call_sync(nodeaddr, ka_packet)
+        if resp.ret_code in [RC_OK, RC_NOT_MY_NEIGHBOUR]:
+            return True
+        else:
+            return False
 
     def check_neighbours(self):
+        if not self.__allow_check_neighbours.is_set():
+            return
         ka_packet = FabnetPacketRequest(method=KEEP_ALIVE_METHOD, sender=self.self_address, sync=True)
         superiors = self.get_neighbours(NT_SUPERIOR)
 
@@ -523,46 +534,56 @@ class Operator:
         self.call_network(packet, neighbour)
 
     def start_discovery_process(self, node, uppers, superiors):
-        self._lock()
+        self.__discovery_lock.acquire()
         try:
             return self.__discovery.discovery_nodes(node, uppers, superiors)
         finally:
-            self._unlock()
+            self.__discovery_lock.release()
+        self.__allow_check_neighbours.set()
 
     def process_manage_neighbours(self, n_type, operation, node_address, op_type, is_force):
-        self._lock()
+        self.__discovery_lock.acquire()
         try:
             return self.__discovery.process_manage_neighbours(n_type, operation, node_address, op_type, is_force)
         finally:
-            self._unlock()
+            self.__discovery_lock.release()
 
     def callback_manage_neighbours(self, n_type, operation, node_address, op_type, dont_append, dont_remove):
-        self._lock()
+        self.__discovery_lock.acquire()
         try:
             return self.__discovery.callback_manage_neighbours(n_type, operation, node_address, op_type, dont_append, dont_remove)
         finally:
-            self._unlock()
+            self.__discovery_lock.release()
 
     def rebalance_remove(self):
-        self._lock()
+        if self.is_stopped():
+            return
+
+        self.__discovery_lock.acquire()
         try:
             self.__discovery.rebalance_remove()
         finally:
-            self._unlock()
+            self.__discovery_lock.release()
 
     def rebalance_append(self, params, **kw_params):
-        self._lock()
+        if self.is_stopped():
+            return
+
+        self.__discovery_lock.acquire()
         try:
             self.__discovery.rebalance_append(params, **kw_params)
         finally:
-            self._unlock()
+            self.__discovery_lock.release()
 
     def smart_neighbours_rebalance(self, node_address, superior_neighbours, upper_neighbours):
-        self._lock()
+        if self.is_stopped():
+            return
+
+        self.__discovery_lock.acquire()
         try:
             self.__discovery.smart_neighbours_rebalance(node_address, superior_neighbours, upper_neighbours)
         finally:
-            self._unlock()
+            self.__discovery_lock.release()
 
 
 

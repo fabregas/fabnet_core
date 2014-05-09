@@ -31,12 +31,28 @@ def usage():
     print('   If you want to start secured fabnet node, home directory should contain key storage file named in format *.p12')
 
 
-def stop_node(PID_FILE):
-    print('stopping fabnet node...')
+def find_proc_by_homedir(homedir):
+    sp = subprocess.Popen('ps aux | grep %s'%homedir, shell=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = sp.communicate()
+    lines = out.strip().split('\n')
+    for line in lines:
+        if 'grep' in line:
+            continue
+        if 'node-daemon' in line and 'stop' in line:
+            continue
+        return int(lines[0].split()[1])
+
+
+def stop_node(PID_FILE, homedir):
     if not os.path.exists(PID_FILE):
-        sys.stderr.write('No pid file found at %s\n'%PID_FILE)
-        sys.exit(20)
-    pid = int(open(PID_FILE).read())
+        pid = find_proc_by_homedir(homedir)
+        if not pid:
+            sys.stdout.write('Node does not started!\n')
+            sys.exit(20)
+        sys.stderr.write('No pid file found at %s but process found at PID=%s\n'%(PID_FILE, pid))
+    else:
+        pid = int(open(PID_FILE).read())
 
     if os.path.exists('/proc/%s'%pid):
         try:
@@ -101,7 +117,7 @@ def start_node(node_address, neighbour, node_name, home_dir, node_type, pid_file
     rcode = wait_node_start(home_dir)
     if rcode:
         sys.stderr.write('trying to stop partly started node...\n')
-        stop_node(pid_file)
+        stop_node(pid_file, home_dir)
         sys.exit(rcode)
         
 
@@ -191,7 +207,7 @@ def main(argv):
                 home_dir, config['NODE_TYPE'], PID_FILE, input_pwd)
         save_init_config(home_dir, config.get_config_dict())
     elif argv[1] == 'stop':
-        stop_node(PID_FILE)
+        stop_node(PID_FILE, home_dir)
     elif argv[1] == 'status':
         if is_node_started(PID_FILE):
             print ('Fabnet node is started!')

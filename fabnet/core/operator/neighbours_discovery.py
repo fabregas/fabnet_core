@@ -217,10 +217,16 @@ class NeigboursDiscoveryRoutines:
         if new_node is None:
             return
 
+        self.__discovered_nodes[n_type].append(new_node)
+
+        if not self.operator.is_node_alive(new_node):
+            #node is not alive...
+            logger.warning('trying communacate with %s node but it is not responding...'%new_node)
+            return self._check_neighbours_count(n_type, neighbours, other_n_type, other_neighbours, ret_parameters, reinit)
+
         parameters = { 'neighbour_type': other_n_type, 'operation': MNO_APPEND,
                     'node_address': self.operator.self_address, 'operator_type': self.operator.OPTYPE }
         self.operator.async_remote_call(new_node, 'ManageNeighbour', parameters)
-        self.__discovered_nodes[n_type].append(new_node)
 
 
     def rebalance_append(self, ret_parameters, reinit_discovery=False):
