@@ -108,7 +108,7 @@ class Node:
         self.osproc_stat.start()
 
         if is_init_node:
-            return
+            neighbour = None
 
         self.oper_client.discovery_neighbours(neighbour)
 

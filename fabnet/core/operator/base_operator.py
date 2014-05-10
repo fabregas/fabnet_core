@@ -561,14 +561,16 @@ class Operator:
             self.call_node(node, packet)
             break
 
-    def discovery_neighbours(self, neighbour):
-        packet = FabnetPacketRequest(method='DiscoveryOperation', sender=self.self_address)
-        self.call_node(neighbour, packet)
+    def discovery_neighbours(self, neighbour=None):
+        if neighbour:
+            packet = FabnetPacketRequest(method='DiscoveryOperation', sender=self.self_address)
+            self.call_node(neighbour, packet)
 
-        params = {'event_type': ET_INFO, 'event_topic': 'NodeUp', \
-                'event_message': 'Hello, fabnet!', 'event_provider': self.self_address}
-        packet = FabnetPacketRequest(method='NotifyOperation', parameters=params)
-        self.call_network(packet, neighbour)
+            params = {'event_type': ET_INFO, 'event_topic': 'NodeUp', \
+                    'event_message': 'Hello, fabnet!', 'event_provider': self.self_address}
+            packet = FabnetPacketRequest(method='NotifyOperation', parameters=params)
+            self.call_network(packet, neighbour)
+
         self.__allow_check_neighbours.set()
 
     def start_discovery_process(self, node, uppers, superiors):
