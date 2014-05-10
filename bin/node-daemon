@@ -23,7 +23,7 @@ def usage():
     print('           or')
     print('       node-daemon start  <neighbour node> | init-fabnet')
     print('           or')
-    print('       node-daemon stop')
+    print('       node-daemon stop [--nowait]')
     print('           or')
     print('       node-daemon status')
     print('\n   You can redefine following environment variables: FABNET_NODE_HOME')
@@ -44,7 +44,7 @@ def find_proc_by_homedir(homedir):
         return int(lines[0].split()[1])
 
 
-def stop_node(PID_FILE, homedir):
+def stop_node(PID_FILE, homedir, nowait=False):
     if not os.path.exists(PID_FILE):
         pid = find_proc_by_homedir(homedir)
         if not pid:
@@ -60,14 +60,17 @@ def stop_node(PID_FILE, homedir):
         except OSError, err:
             sys.stderr.write('Can not stop process with PID=%s. Details: %s\n'%(pid, err))
 
-    for i in xrange(30):
-        time.sleep(1)
-        if not os.path.exists('/proc/%i'%pid):
-            break
+    if nowait:
+        print('fabnet node is stopping now...')
     else:
-        sys.stderr.write('Cant stop fabnet node! See logs for details...\n')
-        sys.exit(1)
-    print('fabnet node is stopped!')
+        for i in xrange(30):
+            time.sleep(1)
+            if not os.path.exists('/proc/%i'%pid):
+                break
+        else:
+            sys.stderr.write('Cant stop fabnet node! See logs for details...\n')
+            sys.exit(1)
+        print('fabnet node is stopped!')
     os.remove(PID_FILE)
 
 
@@ -207,7 +210,7 @@ def main(argv):
                 home_dir, config['NODE_TYPE'], PID_FILE, input_pwd)
         save_init_config(home_dir, config.get_config_dict())
     elif argv[1] == 'stop':
-        stop_node(PID_FILE, home_dir)
+        stop_node(PID_FILE, home_dir, '--nowait' in argv)
     elif argv[1] == 'status':
         if is_node_started(PID_FILE):
             print ('Fabnet node is started!')
