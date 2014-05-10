@@ -70,8 +70,9 @@ MAX_WORKERS_COUNT = 40
 
 
 #certificates constantns
-NODE_CERTIFICATE = 'fabnet.node'
-CLIENT_CERTIFICATE = 'fabnet.client'
+NODE_CERTIFICATE = 'nodes.idepositbox.com'
+CLIENT_CERTIFICATE = 'clients.idepositbox.com'
+
 NODE_ROLE = 'node'
 CLIENT_ROLE = 'client'
 
