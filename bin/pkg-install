@@ -208,7 +208,7 @@ def remove_prev_version(name):
     del pack_info[name]
     open(PACKAGES_INFO, 'w').write(json.dumps(pack_info))
 
-def update_plugins_info(plugins):
+def update_plugins_info(plugins, version):
     from fabnet.utils.plugins import PluginsManager
     cfg_dir = os.path.dirname(PluginsManager.DEFAULT_CONFIG_PATH)
     if not os.path.exists(cfg_dir):
@@ -218,7 +218,7 @@ def update_plugins_info(plugins):
         os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0777)
 
     for n_type, path in plugins.items():
-        PluginsManager.register_operator(n_type, path)
+        PluginsManager.register_operator(n_type, path, version)
     os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0444)
 
 def install(dist_path):
@@ -256,7 +256,7 @@ def install(dist_path):
 
     if plugins:
         print('Updating plugins info ...')
-        update_plugins_info(plugins)    
+        update_plugins_info(plugins, version)
 
     print('Saving installation info ...')
     save_install_info(name, version, installed_files)

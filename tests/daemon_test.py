@@ -70,7 +70,9 @@ class TestOperator(Operator):
         open('%s/test.out', 'w').write(node_name)
 ''' % NODES[1][0]
             plugins_conf = '''operators:
-    TestNode: test_operator.TestOperator'''
+    TestNode:
+        object_path: test_operator.TestOperator
+        version: 0.9.43'''
 
             open('%s/test_operator.py'%NODES[1][0], 'w').write(test_operator_str)
             open('%s/test_plugins_conf.yaml'%NODES[1][0], 'w').write(plugins_conf)

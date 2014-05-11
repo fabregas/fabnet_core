@@ -13,6 +13,7 @@ operators:
 class PluginsManager:
     DEFAULT_CONFIG_PATH = '/opt/blik/fabnet/conf/fabnet_plugins.yaml'
     __config_path = None
+    __versions = {}
 
     @classmethod
     def __get_plugins_config_file(cls):
@@ -26,7 +27,7 @@ class PluginsManager:
         return cls.__config_path
 
     @classmethod
-    def register_operator(cls, node_type, object_path):
+    def register_operator(cls, node_type, object_path, version=None):
         plugins_config = cls.__get_plugins_config_file()
         if os.path.exists(plugins_config):
             data = yaml.load(open(plugins_config).read())
@@ -34,11 +35,15 @@ class PluginsManager:
             data = {}
 
         operators = data.get('operators', {})
-        operators[node_type] = object_path
+        operators[node_type] = {'object_path': object_path, 'version': version}
         data['operators'] = operators
 
         r_str = yaml.dump(data, default_flow_style=False)
         open(plugins_config, 'w').write(r_str)
+
+    @classmethod
+    def get_version(cls, node_type):
+        return cls.__versions.get(node_type.lower(), 'unknown')
 
     @classmethod
     def get_operators(cls):
@@ -51,7 +56,10 @@ class PluginsManager:
         data = yaml.load(open(plugins_config).read())
         operators = data.get('operators', {})
 
-        for node_type, obj_path in operators.items():
+        for node_type, op_info in operators.items():
+            obj_path = op_info['object_path']
+            version = op_info.get('version', 'unknown')
+            cls.__versions[node_type.lower()] = version
             parts = obj_path.split('.')
             obj = parts[-1]
             module = '.'.join(parts[:-1])

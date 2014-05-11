@@ -16,7 +16,8 @@ from fabnet.core.operation_base import  OperationBase
 from fabnet.core.fri_base import FabnetPacketResponse
 from fabnet.utils.logger import oper_logger as logger
 from fabnet.core.constants import NODE_ROLE, CLIENT_ROLE, SI_SYS_INFO, SI_BASE_INFO
-from upgrade_node_operation import UpgradeNodeOperation, VERSION_FILE
+from fabnet.utils.plugins import PluginsManager
+import fabnet
 
 
 class NodeStatisticOperation(OperationBase):
@@ -31,17 +32,6 @@ class NodeStatisticOperation(OperationBase):
         @return object of FabnetPacketRequest class
                 or None for disabling packet resend to neigbours
         """
-        pass
-
-    def get_node_version(self):
-        if not os.path.exists(VERSION_FILE):
-            UpgradeNodeOperation.update_node_info()
-
-        try:
-            return open(VERSION_FILE).read().strip()
-        except Exception, err:
-            logger.error('Cant read version from file %s. Detials: %s'%(VERSION_FILE, err))
-            return 'unknown'
 
     def process(self, packet):
         """In this method should be implemented logic of processing
@@ -74,7 +64,8 @@ class NodeStatisticOperation(OperationBase):
         sysinfo['loadavg_5'] = data[0]
         sysinfo['loadavg_10'] = data[1]
         sysinfo['loadavg_15'] = data[2]
-        sysinfo['fabnet_version'] = self.get_node_version()
+        sysinfo['core_version'] = fabnet.VERSION
+        sysinfo['node_version'] = PluginsManager.get_version(self.operator.get_type())
 
         ret_params[SI_SYS_INFO] = sysinfo
         return FabnetPacketResponse(ret_parameters=ret_params)

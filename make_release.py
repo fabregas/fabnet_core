@@ -8,7 +8,9 @@ if len(sys.argv) != 2:
     sys.exit(1)
 
 open('VERSION', 'w').write(sys.argv[1])
+open('fabnet/__init__.py', 'w').write('VERSION = "%s"\n'%sys.argv[1])
 ret = os.system('git add VERSION')
+ret = os.system('git add fabnet/__init__.py')
 if ret:
     print('ERROR! "git add" failed!')
     sys.exit(1)
