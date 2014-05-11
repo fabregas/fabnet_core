@@ -59,7 +59,7 @@ class OperException(Exception):
     pass
 
 class Operator:
-    OPTYPE = 'Base'
+    OPTYPE = None
     OPERATIONS_LIST = []
 
     @classmethod

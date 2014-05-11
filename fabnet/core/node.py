@@ -79,6 +79,7 @@ class Node:
             logger.error('Node type "%s" does not found!'%self.node_type)
             raise Exception('Node type "%s" does not found!'%self.node_type)
 
+        operator_class.OPTYPE = self.node_type.lower()
         op_proc = OperatorProcess(operator_class, address, self.home_dir, self.keystore, \
                                     is_init_node, self.node_name, config=self.config)
         op_proc.start_carefully()

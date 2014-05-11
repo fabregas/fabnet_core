@@ -43,6 +43,19 @@ class PluginsManager:
 
     @classmethod
     def get_version(cls, node_type):
+        if not cls.__versions:
+            plugins_config = cls.__get_plugins_config_file()
+            if not os.path.exists(plugins_config):
+                logger.warning('Plugins configuration does not found in %s'%plugins_config)
+                return {}
+
+            operators = {}
+            data = yaml.load(open(plugins_config).read())
+            operators = data.get('operators', {})
+
+            for node_type, op_info in operators.items():
+                cls.__versions[node_type.lower()] = op_info.get('version', 'unknown')
+
         return cls.__versions.get(node_type.lower(), 'unknown')
 
     @classmethod
