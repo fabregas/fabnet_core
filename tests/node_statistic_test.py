@@ -59,7 +59,7 @@ class TestNodeStatistic(unittest.TestCase):
             print json.dumps(ret_packet.ret_parameters)
             self.assertEqual(ret_packet.ret_parameters['BaseInfo']['node_name'], 'node_stat_test')
             self.assertEqual(ret_packet.ret_parameters['BaseInfo']['home_dir'], '/tmp/test_node_stat')
-            self.assertEqual(ret_packet.ret_parameters['BaseInfo']['node_types'], ['Base'])
+            self.assertEqual(ret_packet.ret_parameters['BaseInfo']['node_types'], ['base'])
             self.assertEqual(int(ret_packet.ret_parameters['NeighboursInfo']['uppers_balance']), -1)
             self.assertEqual(int(ret_packet.ret_parameters['NeighboursInfo']['superiors_balance']), -1)
             self.assertTrue(float(ret_packet.ret_parameters['SystemInfo']['loadavg_5']) >= 0)
