@@ -42,12 +42,12 @@ class PluginsManager:
         open(plugins_config, 'w').write(r_str)
 
     @classmethod
-    def get_version(cls, node_type):
-        if not cls.__versions:
+    def get_version(cls, node_type, nocache=False):
+        if not cls.__versions or nocache:
             plugins_config = cls.__get_plugins_config_file()
             if not os.path.exists(plugins_config):
                 logger.warning('Plugins configuration does not found in %s'%plugins_config)
-                return {}
+                return 'unknown'
 
             operators = {}
             data = yaml.load(open(plugins_config).read())

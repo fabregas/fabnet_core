@@ -67,7 +67,7 @@ class NodeStatisticOperation(OperationBase):
         sysinfo['loadavg_15'] = data[2]
         sysinfo['core_version'] = fabnet.VERSION
         sysinfo['node_version'] = self.operator.get_node_version()
-        sysinfo['installed_version'] = PluginsManager.get_version(node_type)
+        sysinfo['installed_version'] = PluginsManager.get_version(node_type, nocache=True)
 
         ret_params[SI_SYS_INFO] = sysinfo
         return FabnetPacketResponse(ret_parameters=ret_params)
