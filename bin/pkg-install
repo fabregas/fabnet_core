@@ -6,6 +6,7 @@ import zipfile
 import tempfile
 import urllib2
 import shutil
+import fcntl
 from subprocess import Popen, PIPE
 from setuptools import setup, find_packages
 
@@ -13,6 +14,7 @@ USER_NAME = 'fabnet'
 PACKAGES_PATH = '/opt/blik/fabnet/packages'
 PACKAGES_BIN_PATH = '/opt/blik/fabnet/bin'
 PACKAGES_INFO = '/opt/blik/fabnet/info_packages.json'
+LOCK_FILE = '/opt/blik/fabnet/packages/installer.lock'
 DISTR_INFO_FILE = 'distribution.info'
 
 GENTOO = 'gentoo'
@@ -239,6 +241,16 @@ def update_plugins_info(plugins, version):
         PluginsManager.register_operator(n_type, path, version)
     os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0444)
 
+def _lock():
+    fd = open(LOCK_FILE, 'w')
+    fcntl.lockf(fd, fcntl.LOCK_EX)
+    return fd
+
+def _unlock(fd):
+    fcntl.lockf(fd, fcntl.LOCK_UN)
+    fd.close()
+
+
 def install(dist_path, force=False):
     if not os.path.exists(PACKAGES_PATH):
         os.makedirs(PACKAGES_PATH)
@@ -246,6 +258,9 @@ def install(dist_path, force=False):
         os.makedirs(PACKAGES_BIN_PATH)
     if not os.access(PACKAGES_PATH, os.W_OK):
         raise Exception('Permission denied to %s'%PACKAGES_PATH)
+
+
+    fd = _lock()
 
     name, packages, scripts, deps, submodule, plugins = load_install_info(dist_path)
     version = get_cur_ver(dist_path)
@@ -256,11 +271,15 @@ def install(dist_path, force=False):
             print('Package %s=%s is already installed. Use --force flag for reinstall it'%(name, version))
             return 0
 
+    _unlock(fd)
+
     check_deps(deps)
 
     if submodule:
         print ('Installing %s ...'%submodule)
         install_submodule(submodule)
+
+    fd = _lock()
 
     print('Finding previous version ...')
     remove_prev_version(name)
@@ -288,6 +307,7 @@ def install(dist_path, force=False):
     setup_user()
     update_user_profile()
 
+    _unlock(fd)
     print ('Done.')
 
 def install_submodule(submodule_path):
