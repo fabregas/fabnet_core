@@ -66,6 +66,8 @@ class TestNodeStatistic(unittest.TestCase):
             self.assertTrue(float(ret_packet.ret_parameters['SystemInfo']['loadavg_10']) >= 0)
             self.assertTrue(float(ret_packet.ret_parameters['SystemInfo']['loadavg_15']) >= 0)
             self.assertTrue(len(ret_packet.ret_parameters['SystemInfo']['core_version'])>0)
+            self.assertTrue(len(ret_packet.ret_parameters['SystemInfo']['node_version'])>0)
+            self.assertTrue(len(ret_packet.ret_parameters['SystemInfo']['installed_version'])>0)
             self.assertTrue(len(ret_packet.ret_parameters['SystemInfo']['uptime']) > 0)
             self.assertTrue(float(ret_packet.ret_parameters['FriAgentWMStat']['workers']) > 0)
             self.assertTrue(float(ret_packet.ret_parameters['FriAgentWMStat']['busy']) == 0)

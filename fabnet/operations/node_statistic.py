@@ -16,6 +16,7 @@ from fabnet.core.operation_base import  OperationBase
 from fabnet.core.fri_base import FabnetPacketResponse
 from fabnet.utils.logger import oper_logger as logger
 from fabnet.core.constants import NODE_ROLE, CLIENT_ROLE, SI_SYS_INFO, SI_BASE_INFO
+from fabnet.utils.plugins import PluginsManager
 import fabnet
 
 
@@ -48,11 +49,12 @@ class NodeStatisticOperation(OperationBase):
         if reset_op_stat:
             self.operator.reset_statistic()
 
+        node_type = self.operator.get_type()
         if packet.parameters.get('base_info', False):
             baseinfo = {}
             baseinfo['node_name'] = self.operator.get_node_name()
             baseinfo['home_dir'] = self.operator.get_home_dir()
-            baseinfo['node_types'] = [self.operator.get_type()] #FIXME in future, node can has more than one type
+            baseinfo['node_types'] = [node_type] #FIXME in future, node can has more than one type
             ret_params[SI_BASE_INFO] = baseinfo
 
         loadavgstr = open('/proc/loadavg', 'r').readline().strip()
@@ -65,6 +67,7 @@ class NodeStatisticOperation(OperationBase):
         sysinfo['loadavg_15'] = data[2]
         sysinfo['core_version'] = fabnet.VERSION
         sysinfo['node_version'] = self.operator.get_node_version()
+        sysinfo['installed_version'] = PluginsManager.get_version(node_type)
 
         ret_params[SI_SYS_INFO] = sysinfo
         return FabnetPacketResponse(ret_parameters=ret_params)
