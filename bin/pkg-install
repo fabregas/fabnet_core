@@ -277,7 +277,7 @@ def install(dist_path, force=False):
 
     if submodule:
         print ('Installing %s ...'%submodule)
-        install_submodule(submodule)
+        install_submodule(submodule, force)
 
     fd = _lock()
 
@@ -310,8 +310,8 @@ def install(dist_path, force=False):
     _unlock(fd)
     print ('Done.')
 
-def install_submodule(submodule_path):
-    ret = os.system('python %s %s'%(__file__, submodule_path))
+def install_submodule(submodule_path, force):
+    ret = os.system('python %s %s %s'%(__file__, submodule_path, '--force' if force else ''))
     if ret:
         raise Exception('ERROR! Failed submodule installation!')
 
