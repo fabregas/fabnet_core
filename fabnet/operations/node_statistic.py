@@ -16,7 +16,6 @@ from fabnet.core.operation_base import  OperationBase
 from fabnet.core.fri_base import FabnetPacketResponse
 from fabnet.utils.logger import oper_logger as logger
 from fabnet.core.constants import NODE_ROLE, CLIENT_ROLE, SI_SYS_INFO, SI_BASE_INFO
-from fabnet.utils.plugins import PluginsManager
 import fabnet
 
 
@@ -65,7 +64,7 @@ class NodeStatisticOperation(OperationBase):
         sysinfo['loadavg_10'] = data[1]
         sysinfo['loadavg_15'] = data[2]
         sysinfo['core_version'] = fabnet.VERSION
-        sysinfo['node_version'] = PluginsManager.get_version(self.operator.get_type())
+        sysinfo['node_version'] = self.operator.get_node_version()
 
         ret_params[SI_SYS_INFO] = sysinfo
         return FabnetPacketResponse(ret_parameters=ret_params)

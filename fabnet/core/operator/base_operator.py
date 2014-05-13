@@ -46,6 +46,7 @@ from fabnet.operations.update_node_config import UpdateNodeConfigOperation
 from fabnet.operations.get_node_config import GetNodeConfigOperation
 from fabnet.operations.topology_cognition import TOPOLOGY_DB
 from fabnet.utils.safe_json_file import SafeJsonFile
+from fabnet.utils.plugins import PluginsManager
 
 from fabnet.operations.constants import NB_NORMAL, NB_MORE, NB_LESS, MNO_REMOVE
 
@@ -78,6 +79,7 @@ class Operator:
         self.self_address = self_address
         self.home_dir = home_dir
         self.node_name = node_name
+        self.__node_version = PluginsManager.get_version(self.OPTYPE)
 
         self.__neighbours = {NT_SUPERIOR: {}, NT_UPPER: {}}
 
@@ -205,6 +207,9 @@ class Operator:
 
     def get_config_value(self, config_param):
         return getattr(Config, config_param, None)
+
+    def get_node_version(self): 
+        return self.__node_version
 
     def set_operator_api_workers_manager(self, api_workers_mgr):
         self.__api_workers_mgr = api_workers_mgr

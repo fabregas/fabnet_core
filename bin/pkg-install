@@ -208,6 +208,24 @@ def remove_prev_version(name):
     del pack_info[name]
     open(PACKAGES_INFO, 'w').write(json.dumps(pack_info))
 
+def check_versions(name, new_ver):
+    if not os.path.exists(PACKAGES_INFO):
+        return False
+
+    try:
+        pack_info = json.loads(open(PACKAGES_INFO).read())
+    except Exception, err:
+        print('Warning! Invalid file %s'%PACKAGES_INFO)
+        return False
+
+    d_info = pack_info.get(name, None)
+    if not d_info:
+        return False
+
+    if d_info['version'] == new_ver:
+        return True
+    return False
+
 def update_plugins_info(plugins, version):
     from fabnet.utils.plugins import PluginsManager
     cfg_dir = os.path.dirname(PluginsManager.DEFAULT_CONFIG_PATH)
@@ -221,7 +239,7 @@ def update_plugins_info(plugins, version):
         PluginsManager.register_operator(n_type, path, version)
     os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0444)
 
-def install(dist_path):
+def install(dist_path, force=False):
     if not os.path.exists(PACKAGES_PATH):
         os.makedirs(PACKAGES_PATH)
     if not os.path.exists(PACKAGES_BIN_PATH):
@@ -231,6 +249,12 @@ def install(dist_path):
 
     name, packages, scripts, deps, submodule, plugins = load_install_info(dist_path)
     version = get_cur_ver(dist_path)
+
+    if not force:
+        exists = check_versions(name, version)
+        if exists:
+            print('Package %s=%s is already installed. Use --force flag for reinstall it'%(name, version))
+            return 0
 
     check_deps(deps)
 
@@ -273,7 +297,7 @@ def install_submodule(submodule_path):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print('Usage: %s <distribution path>'%sys.argv[0])
+        print('Usage: %s <distribution path> [--force]'%sys.argv[0])
         sys.exit(1)
 
     dist = sys.argv[1]
@@ -296,9 +320,9 @@ if __name__ == '__main__':
         else:
             raise Exception('Invalid path "%s"'%dist)
 
-        install(dist)
+        install(dist, '--force' in sys.argv)
     except Exception, err:
-        print('ERROR: %s'%err)
+        sys.stderr.write('ERROR: %s\n'%err)
         sys.exit(1)
     finally:
         if tmp_dir:

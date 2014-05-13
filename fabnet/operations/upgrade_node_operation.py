@@ -16,35 +16,13 @@ from fabnet.core.operation_base import  OperationBase
 from fabnet.core.fri_base import FabnetPacketResponse
 from fabnet.utils.logger import oper_logger as logger
 from fabnet.utils.exec_command import run_command_ex
-from fabnet.core.constants import ET_ALERT, NODE_ROLE
+from fabnet.core.constants import ET_ALERT, NODE_ROLE, RC_UPGRADE_ERROR
 
-GIT_HOME = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
-VERSION_FILE = os.path.join(GIT_HOME, 'VERSION')
+INSTALLATOR = '/opt/blik/fabnet/bin/pkg-install'
 
 class UpgradeNodeOperation(OperationBase):
     ROLES = [NODE_ROLE]
     NAME = 'UpgradeNode'
-
-    @classmethod
-    def update_node_info(cls):
-        ver = 'unknown'
-        old_curdir = os.path.abspath(os.curdir)
-        try:
-            os.chdir(GIT_HOME)
-            ret, cout, cerr = run_command_ex(['git', 'describe', '--always', '--tag'])
-            if ret != 0:
-                raise Exception(cerr)
-            ver = cout.strip()
-        except Exception, err:
-            logger.error('"git describe --always --tag" failed: %s'%err)
-        finally:
-            os.chdir(old_curdir)
-
-        try:
-            open(VERSION_FILE, 'w').write(ver)
-        except Exception, err:
-            logger.error('Cant save version file %s. Details: %s'%(VERSION_FILE, err))
-
 
     def before_resend(self, packet):
         """In this method should be implemented packet transformation
@@ -56,47 +34,32 @@ class UpgradeNodeOperation(OperationBase):
         """
         return packet
 
-    def __upgrade_node(self, origin_url):
-        f_upgrage_log = None
-        old_curdir = os.path.abspath(os.curdir)
+    def __upgrade_node(self, origin_url, force=False):
+        f_upgrade_log = None
         try:
             if not origin_url:
                 raise Exception('origin_url does not found')
 
-            f_upgrage_log = open(os.path.join(self.home_dir, 'upgrade_node.log'), 'a')
-            f_upgrage_log.write('='*80+'\n')
-            f_upgrage_log.write('UPGRADE FROM %s ... NOW = %s\n'%(origin_url, datetime.now()))
-            f_upgrage_log.write('='*80+'\n')
+            f_upgrade_log = open(os.path.join(self.home_dir, 'upgrade_node.log'), 'a')
+            f_upgrade_log.write('='*80+'\n')
+            f_upgrade_log.write('UPGRADE FROM %s ... NOW = %s\n'%(origin_url, datetime.now()))
+            f_upgrade_log.write('='*80+'\n')
 
-            os.chdir(GIT_HOME)
-            os.system('git checkout -- .') #clear local changes...
-            os.system('git config --local --replace-all remote.origin.url %s'%origin_url)
+            custom_installator = self.operator.get_config_value('INSTALLATOR_PATH')
+            installator = custom_installator or INSTALLATOR
+            params = ['sudo', installator, origin_url]
+            if force:
+                params.append('--force')
 
-            ret, cout, cerr = run_command_ex(['git', 'pull'])
-            f_upgrage_log.write('===> git pull finished with code %s\n'%ret)
-            f_upgrage_log.write('===> stdout: \n%s'%cout)
-            f_upgrage_log.write('===> stderr: \n%s'%cerr)
+            ret, cout, cerr = run_command_ex(params)
+            f_upgrade_log.write(cout)
+            f_upgrade_log.write(cerr)
             if ret != 0:
-                raise Exception('git pull failed: %s'%cerr)
-
-            optype = self.operator.get_type()
-            ret, cout, cerr = run_command_ex(['./bin/upgrade-node', optype])
-            f_upgrage_log.write('===> ./bin/upgrade-node %s  finished with code %s\n'%(optype, ret))
-            f_upgrage_log.write('===> stdout: \n%s'%cout)
-            f_upgrage_log.write('===> stderr: \n%s'%cerr)
-            if ret != 0:
-                raise Exception('upgrade-node script failed!')
-
-            self.update_node_info()
-
-            f_upgrage_log.write('Node is upgraded successfully!\n\n')
-        except Exception, err:
-            self._throw_event(ET_ALERT, 'UpgradeNodeOperation failed', err)
-            logger.error('[UpgradeNodeOperation] %s'%err)
+                raise Exception(cerr.strip())
+            f_upgrade_log.write('Node is upgraded successfully!\n\n')
         finally:
-            os.chdir(old_curdir)
-            if f_upgrage_log:
-                f_upgrage_log.close()
+            if f_upgrade_log:
+                f_upgrade_log.close()
 
 
     def process(self, packet):
@@ -107,7 +70,19 @@ class UpgradeNodeOperation(OperationBase):
         @return object of FabnetPacketResponse
                 or None for disabling packet response to sender
         """
-        self.__upgrade_node(packet.parameters.get('origin_repo_url', None))
+        releases = packet.parameters.get('releases', {})
+        optype = self.operator.get_type()
+        repo_url = releases.get(optype.lower(), None)
+        if not repo_url:
+            logger.warning('UpgradeNodeOperation: release URL does not specified for "%s" node type'%optype)
+        else:
+            try:
+                self.__upgrade_node(repo_url, packet.parameters.get('force', False))
+            except Exception, err:
+                self._throw_event(ET_ALERT, 'UpgradeNodeOperation failed', err)
+                logger.error('[UpgradeNodeOperation] %s'%err)
+                return FabnetPacketResponse(ret_code=RC_UPGRADE_ERROR, ret_message=err)
+        return FabnetPacketResponse()
 
 
     def callback(self, packet, sender):

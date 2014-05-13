@@ -80,7 +80,7 @@ class PluginsManager:
             try:
                 exec('from %s import %s'%(module, obj))
             except Exception, err:
-                logger.error('Plugin %s loading error for node type %s. Details: %s'%(obj_path, node_type, err))
+                logger.warning('Plugin %s loading error. Details: %s'%(obj_path, err))
                 continue
 
             operators[node_type.lower()] = eval(obj)
