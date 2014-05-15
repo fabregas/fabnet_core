@@ -237,8 +237,14 @@ def update_plugins_info(plugins, version):
     if os.path.exists(PluginsManager.DEFAULT_CONFIG_PATH):
         os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0777)
 
-    for n_type, path in plugins.items():
+    operators = plugins.get('operators', {})
+    for n_type, path in operators.items():
         PluginsManager.register_operator(n_type, path, version)
+
+    for section_name, section in plugins.items():
+        if section_name == 'operators':
+            continue
+        PluginsManager.update_section(section_name, section)
     os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0444)
 
 def _lock():

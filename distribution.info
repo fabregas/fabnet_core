@@ -11,3 +11,11 @@ dependencies = {'gentoo': ('pyyaml', 'm2crypto', 'python-daemon'),
 
 #submodule = 'submodule path'
 
+#plugins_info = {'operators':
+#                   {'node_type': 'node.type.path.to.object'},
+#                'mgmt_plugins':
+#                   {'cli_plugins': ['path.to.object'],
+#                    'rest_plugins': ['path.to.object']
+#                   }
+#               }
+

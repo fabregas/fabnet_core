@@ -28,30 +28,12 @@ class PluginsManager:
 
     @classmethod
     def register_operator(cls, node_type, object_path, version=None):
-        plugins_config = cls.__get_plugins_config_file()
-        if os.path.exists(plugins_config):
-            data = yaml.load(open(plugins_config).read())
-        else:
-            data = {}
-
-        operators = data.get('operators', {})
-        operators[node_type] = {'object_path': object_path, 'version': version}
-        data['operators'] = operators
-
-        r_str = yaml.dump(data, default_flow_style=False)
-        open(plugins_config, 'w').write(r_str)
+        cls.update_section('operators', {'object_path': object_path, 'version': version})
 
     @classmethod
     def get_version(cls, node_type, nocache=False):
         if not cls.__versions or nocache:
-            plugins_config = cls.__get_plugins_config_file()
-            if not os.path.exists(plugins_config):
-                logger.warning('Plugins configuration does not found in %s'%plugins_config)
-                return 'unknown'
-
-            operators = {}
-            data = yaml.load(open(plugins_config).read())
-            operators = data.get('operators', {})
+            operators = cls.get_section('operators')
 
             for node_type, op_info in operators.items():
                 cls.__versions[node_type.lower()] = op_info.get('version', 'unknown')
@@ -60,14 +42,7 @@ class PluginsManager:
 
     @classmethod
     def get_operators(cls):
-        plugins_config = cls.__get_plugins_config_file()
-        if not os.path.exists(plugins_config):
-            logger.warning('Plugins configuration does not found in %s'%plugins_config)
-            return {}
-
-        operators = {}
-        data = yaml.load(open(plugins_config).read())
-        operators = data.get('operators', {})
+        operators = cls.get_section('operators')
 
         for node_type, op_info in operators.items():
             obj_path = op_info['object_path']
@@ -85,4 +60,30 @@ class PluginsManager:
 
             operators[node_type.lower()] = eval(obj)
         return operators
+
+    @classmethod
+    def get_section(cls, section):
+        plugins_config = cls.__get_plugins_config_file()
+        if not os.path.exists(plugins_config):
+            logger.warning('Plugins configuration does not found in %s'%plugins_config)
+            return {}
+
+        operators = {}
+        data = yaml.load(open(plugins_config).read())
+        return data.get(section, {})
+
+    @classmethod
+    def update_section(cls, section_name, section):
+        plugins_config = cls.__get_plugins_config_file()
+        if os.path.exists(plugins_config):
+            data = yaml.load(open(plugins_config).read())
+        else:
+            data = {}
+
+        cur_section = data.get(section_name, {})
+        cur_section.update(section)
+        data[section_name] = cur_section
+
+        r_str = yaml.dump(data, default_flow_style=False)
+        open(plugins_config, 'w').write(r_str)
 
