@@ -244,7 +244,7 @@ def update_plugins_info(plugins, version):
     for section_name, section in plugins.items():
         if section_name == 'operators':
             continue
-        PluginsManager.update_section(section_name, section)
+        PluginsManager.update_section(section_name, {n_type: section})
     os.chmod(PluginsManager.DEFAULT_CONFIG_PATH, 0444)
 
 def _lock():

@@ -8,6 +8,8 @@ from fabnet.utils.logger import logger
 operators:
     DHT: fabnet_dht.dht.dht_operator.DHTOperator
     MGMT: fabnet_mgmt.mgmt_operator.MgmtOperator
+mgmt_plugins:
+    DHT: {cli_plugins: path.to.object}
 '''
 
 class PluginsManager:
@@ -28,7 +30,7 @@ class PluginsManager:
 
     @classmethod
     def register_operator(cls, node_type, object_path, version=None):
-        cls.update_section('operators', {'object_path': object_path, 'version': version})
+        cls.update_section('operators', {node_type: {'object_path': object_path, 'version': version}})
 
     @classmethod
     def get_version(cls, node_type, nocache=False):
