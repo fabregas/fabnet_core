@@ -13,7 +13,7 @@ This module contains the fabnet logger initialization
 import logging, logging.handlers
 import sys
 
-def init_logger(logger_name='localhost'):
+def init_logger(logger_name='localhost', to_console=True):
     logger = logging.getLogger(logger_name)
 
     logger.setLevel(logging.INFO)
@@ -31,9 +31,10 @@ def init_logger(logger_name='localhost'):
     hdlr.setFormatter(formatter)
     logger.addHandler(hdlr)
 
-    console = logging.StreamHandler()
-    console.setFormatter(formatter)
-    logger.addHandler(console)
+    if to_console:
+        console = logging.StreamHandler()
+        console.setFormatter(formatter)
+        logger.addHandler(console)
 
     return logger
 
