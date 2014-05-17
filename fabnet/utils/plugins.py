@@ -37,8 +37,8 @@ class PluginsManager:
         if not cls.__versions or nocache:
             operators = cls.get_section('operators')
 
-            for node_type, op_info in operators.items():
-                cls.__versions[node_type.lower()] = op_info.get('version', 'unknown')
+            for s_node_type, op_info in operators.items():
+                cls.__versions[s_node_type.lower()] = op_info.get('version', 'unknown')
 
         return cls.__versions.get(node_type.lower(), 'unknown')
 
