@@ -34,28 +34,27 @@ class UpgradeNodeOperation(OperationBase):
         """
         return packet
 
-    def __upgrade_node(self, origin_url, force=False):
+    def __upgrade_node(self, origin_urls, force=False):
         f_upgrade_log = None
         try:
-            if not origin_url:
-                raise Exception('origin_url does not found')
-
             f_upgrade_log = open(os.path.join(self.home_dir, 'upgrade_node.log'), 'a')
-            f_upgrade_log.write('='*80+'\n')
-            f_upgrade_log.write('UPGRADE FROM %s ... NOW = %s\n'%(origin_url, datetime.now()))
-            f_upgrade_log.write('='*80+'\n')
-
             custom_installator = self.operator.get_config_value('INSTALLATOR_PATH')
             installator = custom_installator or INSTALLATOR
-            params = ['sudo', installator, origin_url]
-            if force:
-                params.append('--force')
 
-            ret, cout, cerr = run_command_ex(params)
-            f_upgrade_log.write(cout)
-            f_upgrade_log.write(cerr)
-            if ret != 0:
-                raise Exception(cerr.strip())
+            for origin_url in origin_urls:
+                f_upgrade_log.write('='*80+'\n')
+                f_upgrade_log.write('UPGRADE FROM %s ... NOW = %s\n'%(origin_url, datetime.now()))
+                f_upgrade_log.write('='*80+'\n')
+
+                params = ['sudo', installator, origin_url]
+                if force:
+                    params.append('--force')
+
+                ret, cout, cerr = run_command_ex(params)
+                f_upgrade_log.write(cout)
+                f_upgrade_log.write(cerr)
+                if ret != 0:
+                    raise Exception(cerr.strip())
             f_upgrade_log.write('Node is upgraded successfully!\n\n')
         finally:
             if f_upgrade_log:
@@ -71,18 +70,25 @@ class UpgradeNodeOperation(OperationBase):
                 or None for disabling packet response to sender
         """
         releases = packet.parameters.get('releases', {})
-        optype = self.operator.get_type()
-        repo_url = releases.get(optype.lower(), None)
-        if not repo_url:
-            logger.warning('UpgradeNodeOperation: release URL does not specified for "%s" node type'%optype)
-        else:
+        optype = self.operator.get_type().lower()
+        
+        for n_type, urls in releases.items():
+            if n_type.lower() != optype:
+                continue
+
+            if type(urls) not in (list, tuple):
+                urls = [urls]
+
             try:
-                self.__upgrade_node(repo_url, packet.parameters.get('force', False))
+                self.__upgrade_node(urls, packet.parameters.get('force', False))
             except Exception, err:
                 self._throw_event(ET_ALERT, 'UpgradeNodeOperation failed', err)
                 logger.error('[UpgradeNodeOperation] %s'%err)
                 return FabnetPacketResponse(ret_code=RC_UPGRADE_ERROR, ret_message=err)
-        return FabnetPacketResponse()
+
+            return FabnetPacketResponse()
+        else:
+            logger.warning('UpgradeNodeOperation: release URL does not specified for "%s" node type'%optype)
 
 
     def callback(self, packet, sender):
