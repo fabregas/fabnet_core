@@ -10,8 +10,10 @@ Copyright (C) 2013 Konstantin Andrusenko
 
 This module contains the OperationsManager class implementation
 """
+
+import time
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from multiprocessing import RLock
 
 from fabnet.utils.internal import total_seconds
@@ -23,6 +25,30 @@ from fabnet.core.operation_base import OperationBase, PermissionDeniedException
 from fabnet.core.constants import RC_ALREADY_PROCESSED, RC_PERMISSION_DENIED, \
                                 RC_MESSAGE_ID_NOT_FOUND, KEEP_ALIVE_METHOD
 
+class Session:
+    SESSION_LIVE_TIME = timedelta(0, 7200) #secs
+
+    def __init__(self, cn, role, end_dt=None):
+        self.cn = cn
+        self.role = role
+        if not end_dt:
+            self.end_dt = datetime.utcnow() + self.SESSION_LIVE_TIME
+        else:
+            self.end_dt = datetime.fromtimestamp(float(end_dt))
+
+    def is_valid(self):
+        if self.end_dt < datetime.utcnow():
+            return False
+        return True
+
+    def dump(self):
+        return '%s~~%s~~%s'%(self.cn, self.role, time.mktime(self.end_dt.timetuple()))
+
+    @classmethod
+    def load(cls, raw):
+        return Session(* raw.split('~~'))
+
+
 class OperationsManager:
     def __init__(self, operations_classes, server_name, key_storage=None):
         self.__operations = {}
@@ -32,13 +58,8 @@ class OperationsManager:
         self.__self_address = self.operator_cl.get_self_address()
         home_dir = self.operator_cl.get_home_dir()
 
-        if key_storage:
-            cert = key_storage.cert()
-            ckey = key_storage.cert_key()
-        else:
-            cert = ckey = None
-
-        self.__fri_client = FriClient(bool(cert), cert, ckey)
+        self.__key_storage = key_storage
+        self.__fri_client = FriClient(key_storage)
 
         for op_class in operations_classes:
             if not issubclass(op_class, OperationBase):
@@ -169,8 +190,18 @@ class OperationsManager:
                         binary_data_pointer)
 
     def get_session(self, session_id):
-        return self.operator_cl.get_session(session_id)
+        if not session_id:
+            return
+        try:
+            key = self.operator_cl.get_auth_key()
+            raw = self.__key_storage.sym_decrypt(key, session_id)
+            return Session.load(raw)
+        except Exception, err:
+            return None
 
-    def put_session(self, session_id, role):
-        return self.operator_cl.put_session(session_id, role)
+    def create_session(self, cn, role):
+        key = self.operator_cl.get_auth_key()
+        session = Session(cn, role)
+        return self.__key_storage.sym_encrypt(key, session.dump())
+
 

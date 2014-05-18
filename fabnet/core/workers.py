@@ -135,7 +135,7 @@ class ThreadBasedFriWorker(ThreadBasedAbstractWorker):
             socket.set_accept_state()
             socket.accept_ssl()
 
-        socket_proc = SocketProcessor(socket)
+        socket_proc = SocketProcessor(socket, self._key_storage)
 
         try:
             self.process(socket_proc)
@@ -166,7 +166,7 @@ class ProcessBasedFriWorker(ProcessBasedAbstractWorker):
             sock.set_accept_state()
             sock.accept_ssl()
 
-        socket_proc = SocketProcessor(sock)
+        socket_proc = SocketProcessor(sock, self._key_storage)
 
         try:
             self.process(socket_proc)

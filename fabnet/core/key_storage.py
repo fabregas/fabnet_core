@@ -17,9 +17,14 @@ import subprocess
 import hashlib
 import tempfile
 from datetime import datetime
+from base64 import b64encode, b64decode
 
-from M2Crypto import RSA, X509
+from M2Crypto import RSA, X509, EVP
 from M2Crypto.SSL import Context
+from M2Crypto.EVP import Cipher
+
+ENC=1
+DEC=0
 
 from constants import NODE_CERTIFICATE, CLIENT_CERTIFICATE, \
                         NODE_ROLE, CLIENT_ROLE
@@ -40,6 +45,9 @@ class InvalidCertificate(Exception):
     pass
 
 class InvalidPassword(Exception):
+    pass
+
+class AuthError(Exception):
     pass
 
 def exec_openssl(command, stdin=None):
@@ -89,7 +97,10 @@ class TmpFile:
 
 
 class KeyStorage:
+    IV = '\0' * 16
+
     __CA_CERTS = {}
+
     @classmethod
     def install_ca_certs(cls, certs):
         for cert in certs:
@@ -223,7 +234,7 @@ class KeyStorage:
         user_key = cert.get_serial_number()
         return user_key
 
-    def verify_cert(self, cert_str):
+    def verify_cert(self, cert_str, signed_data, data):
         '''Verify certificate and return certificate role'''
         try:
             cert = X509.load_cert_string(str(cert_str))
@@ -243,7 +254,45 @@ class KeyStorage:
 
         if not cert.verify(ca_cert.get_pubkey()):
             raise InvalidCertificate('Certificate verification is failed!')
-        return ROLES_MAP.get(cert_type, cert_type)
+
+        if type(data) == unicode:
+            data = data.encode('utf8')
+        if type(signed_data) == unicode:
+            signed_data = signed_data.encode('utf8')
+        pubkey = cert.get_pubkey()
+        pubkey.reset_context()
+        pubkey.verify_init()
+        pubkey.verify_update(data)
+        if not pubkey.verify_final(b64decode(signed_data)):
+            raise AuthError('Permission denied! Invalid signature!')
+
+        return cert.get_subject().CN, ROLES_MAP.get(cert_type, cert_type)
+
+    def sign(self, data):
+        if type(data) == unicode:
+            data = data.encode('utf8')
+        key = EVP.load_key_string(self.__private)
+        key.reset_context()
+        key.sign_init()
+        key.sign_update(data)
+        sign = key.sign_final()
+        signed = b64encode(sign)
+        return signed
+
+    def sym_encrypt(self, key, data):
+        cipher = Cipher(alg='aes_128_cbc', key=key, iv=self.IV, op=ENC)
+        v = cipher.update(data)
+        v = v + cipher.final()
+        del cipher
+        return b64encode(v)
+
+    def sym_decrypt(self, key, data):
+        data = b64decode(data)
+        cipher = Cipher(alg='aes_128_cbc', key=key, iv=self.IV, op=DEC)
+        v = cipher.update(data)
+        v = v + cipher.final()
+        del cipher
+        return v
 
 
 def init_keystore(ks_path, passwd):

@@ -34,6 +34,8 @@ class PluginsManager:
 
     @classmethod
     def get_version(cls, node_type, nocache=False):
+        if not node_type:
+            return 'unknown'
         if not cls.__versions or nocache:
             operators = cls.get_section('operators')
 

@@ -10,13 +10,14 @@ Copyright (C) 2013 Konstantin Andrusenko
 
 This module contains the OperationsProcessor class implementation
 """
+import uuid
 import traceback
 import threading
 
 from fabnet.utils.logger import oper_logger as logger
 from fabnet.core.fri_base import FabnetPacketResponse
 from fabnet.core.constants import RC_OK, RC_ERROR, RC_INVALID_CERT, \
-                                RC_REQ_CERTIFICATE, STAT_COLLECTOR_TIMEOUT, SO_OPERS_TIME
+                                RC_REQ_AUTH, STAT_COLLECTOR_TIMEOUT, SO_OPERS_TIME
 from fabnet.core.workers import ProcessBasedFriWorker
 from fabnet.core.key_storage import InvalidCertificate
 from fabnet.core.statistic import StatisticCollector, StatMap
@@ -95,23 +96,33 @@ class OperationsProcessor(ProcessBasedFriWorker):
                 sock_proc.send_packet(FabnetPacketResponse())
             return None
 
-        if not session_id:
-            raise Exception('SessionID does not found!')
-
         session = self.oper_manager.get_session(session_id)
+        if session_id and session is None:
+            logger.debug('Invalid session "%s"'%session_id)
+
+        if session and not session.is_valid():
+            logger.debug('Session for "%s" is expired'%session.cn)
+            session = None
+
         if session is None:
-            cert_req_packet = FabnetPacketResponse(ret_code=RC_REQ_CERTIFICATE, ret_message='Certificate request')
+            data = str(uuid.uuid4())
+            cert_req_packet = FabnetPacketResponse(ret_code=RC_REQ_AUTH, ret_parameters={'data': data})
             sock_proc.send_packet(cert_req_packet)
-            cert_packet = sock_proc.recv_packet()
+            cert_packet = sock_proc.recv_packet(allow_socket_close=False)
 
             certificate = cert_packet.parameters.get('certificate', None)
-
             if not certificate:
                 raise InvalidCertificate('No client certificate found!')
 
-            role = self._key_storage.verify_cert(certificate)
+            signed_data = cert_packet.parameters.get('signed_data', None)
+            if not signed_data:
+                raise InvalidCertificate('No signed data found!')
 
-            self.oper_manager.put_session(session_id, role)
+            cn, role = self._key_storage.verify_cert(certificate, signed_data, data)
+
+            session_id = self.oper_manager.create_session(cn, role)
+            req_packet = FabnetPacketResponse(ret_code=RC_OK, ret_parameters={'session_id': session_id})
+            sock_proc.send_packet(req_packet)
             return role
 
         if send_allow:

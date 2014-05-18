@@ -45,8 +45,7 @@ class TestNodeDaemon(unittest.TestCase):
         self.assertEqual(ret, 0)
         second_started = False
         try:
-            cert = ckey = None
-            client = FriClient(bool(cert), cert, ckey)
+            client = FriClient()
 
             packet = FabnetPacketRequest(method='DiscoveryOperation', parameters={}, sync=True)
             resp = client.call_sync(NODES[0][1], packet)

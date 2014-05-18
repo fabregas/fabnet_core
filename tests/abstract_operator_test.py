@@ -7,7 +7,6 @@ import threading
 from fabnet.core.constants import RC_OK, RC_ERROR
 from fabnet.core.fri_base import FabnetPacketRequest, FabnetPacketResponse
 from fabnet.core.fri_server import FriServer
-from fabnet.core.fri_client import FriClient
 from fabnet.core.workers_manager import WorkersManager
 from fabnet.core.workers import ProcessBasedFriWorker, ThreadBasedFriWorker
 from fabnet.utils.logger import logger

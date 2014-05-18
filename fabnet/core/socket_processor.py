@@ -13,9 +13,9 @@ This module contains the implementation of SocketBasedChunks and  SocketProcesso
 import socket
 import threading
 
-from constants import BUF_SIZE, RC_REQ_CERTIFICATE, FRI_PACKET_INFO_LEN, RC_REQ_BINARY_CHUNK
+from constants import BUF_SIZE, RC_REQ_AUTH, FRI_PACKET_INFO_LEN, RC_REQ_BINARY_CHUNK, RC_OK
 from fri_base import FriBinaryProcessor, FabnetPacketRequest, FabnetPacketResponse, \
-            FriException, FriBinaryData, RamBasedBinaryData, FabnetPacket
+            FriException, FriAuthException, FriBinaryData, RamBasedBinaryData, FabnetPacket
 
 
 class SocketBasedChunks(FriBinaryData):
@@ -55,13 +55,14 @@ class SocketBasedChunks(FriBinaryData):
 class SocketProcessor:
     force_close_flag = threading.Event()
 
-    def __init__(self, sock, cert=None):
+    def __init__(self, sock, ks=None):
         self.__sock = sock
         self.__rest_data = ''
-        self.__cert = cert
+        self.__ks = ks
         self.__can_close_socket = False #socket can be closed (no pending chunks)
         self.__need_sock_close = False #socket should be closed (after all chunks received)
         self.__send_on_close = None #packet that should be send before close socket (ignore if None)
+        self.__session_id = None
 
     def read_next_packet(self):
         data = ''
@@ -101,14 +102,24 @@ class SocketProcessor:
         packet = FabnetPacket.create(packet)
         return packet, bin_data
 
-    def __send_cert(self):
-        req = FabnetPacketRequest(method='crtput', parameters={'certificate': self.__cert})
+    def __auth(self, data):
+        signed_data = self.__ks.sign(data)
+        req = FabnetPacketRequest(method='crtput', parameters={'certificate': self.__ks.cert(),
+                                                        'signed_data': signed_data})
         self.__sock.sendall(req.dump())
+        packet, _ = self.read_next_packet()
+        if packet.ret_code != RC_OK:
+            raise FriAuthException('FRI Auth error: %s'%packet.ret_message)
 
+        self.__session_id = packet.ret_parameters.get('session_id', None)
+
+    def get_session_id(self):
+        return self.__session_id
+        
     def recv_packet(self, allow_socket_close=True):
         packet, bin_data = self.read_next_packet()
-        if packet.is_response and packet.ret_code == RC_REQ_CERTIFICATE:
-            self.__send_cert()
+        if packet.is_response and packet.ret_code == RC_REQ_AUTH:
+            self.__auth(packet.ret_parameters.get('data', None))
             packet, bin_data = self.read_next_packet()
 
         cnt = packet.binary_chunk_cnt
@@ -136,8 +147,8 @@ class SocketProcessor:
 
             if packet.is_request:
                 allow_packet, _ = self.read_next_packet()
-                if allow_packet.is_response and allow_packet.ret_code == RC_REQ_CERTIFICATE:
-                    self.__send_cert()
+                if allow_packet.is_response and allow_packet.ret_code == RC_REQ_AUTH:
+                    self.__auth(allow_packet.ret_parameters.get('data', None))
 
             for i in xrange(packet.binary_chunk_cnt):
                 resp_packet = self.recv_packet()

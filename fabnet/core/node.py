@@ -120,12 +120,8 @@ class Node:
             params = {'event_type': ET_INFO, 'event_topic': 'NodeDown', \
                         'event_message': 'Goodbye, fabnet :(', 'event_provider': address}
             packet = FabnetPacketRequest(method='NotifyOperation', parameters=params, sender=None, multicast=True)
-            if self.keystore:
-                cert = self.keystore.cert()
-                ckey = self.keystore.cert_key()
-            else:
-                cert = ckey = None
-            fri_client = FriClient(bool(cert), cert, ckey)
+
+            fri_client = FriClient(self.keystore)
             fri_client.call(address, packet)
         except Exception, err:
             logger.warning('Cant send notification to network. Details: %s'%err)

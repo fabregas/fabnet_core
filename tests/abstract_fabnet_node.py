@@ -24,7 +24,7 @@ from Queue import Queue
 from fabnet.core.operator import Operator, OperatorProcess, OperatorClient
 from fabnet.core.operation_base import OperationBase
 from fabnet.core.fri_base import RamBasedBinaryData
-from fabnet.core.constants import NODE_ROLE, CLIENT_ROLE, RC_PERMISSION_DENIED, RC_INVALID_CERT
+from fabnet.core.constants import NODE_ROLE, CLIENT_ROLE, RC_PERMISSION_DENIED, RC_AUTH_ERROR
 
 
 VALID_STORAGE = './tests/cert/test_keystorage.p12'
@@ -120,13 +120,7 @@ class TestAbstractFabnetNode(unittest.TestCase):
     def __defferent_calls(self, key_storage=None):
         fri_server, operator_proc = self.__start_node('testnode00', key_storage)
         try:
-            if key_storage:
-                cert = key_storage.cert()
-                ckey = key_storage.cert_key()
-            else:
-                cert = ckey = None
-
-            fri_client = FriClient(bool(cert), cert, ckey)
+            fri_client = FriClient(key_storage)
 
             #sync call without binary
             resp = fri_client.call_sync('127.0.0.1:6666', FabnetPacketRequest(method='echo', \
@@ -158,7 +152,11 @@ class TestAbstractFabnetNode(unittest.TestCase):
             self.assertEqual(resp.ret_code, 0, resp.ret_message)
             self.assertEqual(resp.binary_data.data(), data)
             self.assertEqual(resp.ret_parameters['message'], 'hello, fabregas!')
-
+            session_id = fri_client.get_session_id()
+            if key_storage:
+                self.assertNotEqual(session_id, None)
+            else:
+                self.assertEqual(session_id, None)
 
             #async call with binary
             resp = fri_client.call('127.0.0.1:6666', FabnetPacketRequest(method='echo', \
@@ -166,6 +164,16 @@ class TestAbstractFabnetNode(unittest.TestCase):
                                         binary_data=RamBasedBinaryData(data, 900000)))
             time.sleep(1)
             EchoOperation.check_resp('hello, fabregas!', data)
+            n_session_id = fri_client.get_session_id()
+            self.assertEqual(session_id, n_session_id)
+
+            fri_client = FriClient(key_storage)
+            resp = fri_client.call('127.0.0.1:6666', FabnetPacketRequest(method='echo', \
+                                        parameters={'message': 'hello, fabregas!'}, \
+                                        binary_data=RamBasedBinaryData(data, 900000)))
+            n_session_id = fri_client.get_session_id()
+            if key_storage:
+                self.assertNotEqual(session_id, n_session_id)
 
             #unauth cal
             resp = fri_client.call_sync('127.0.0.1:6666', FabnetPacketRequest(method='unauth'))
@@ -173,7 +181,6 @@ class TestAbstractFabnetNode(unittest.TestCase):
                 self.assertEqual(resp.ret_code, RC_PERMISSION_DENIED, resp.ret_message)
             else:
                 self.assertEqual(resp.ret_code, 0, resp.ret_message)
-
 
             #EchoWithCallOperation
             #sync call without binary
@@ -216,22 +223,17 @@ class TestAbstractFabnetNode(unittest.TestCase):
         self.__defferent_calls(ks)
 
     def test02_with_invalid_ks(self):
+        KeyStorage.install_ca_certs(CA_CERTS)
         key_storage = KeyStorage(INVALID_STORAGE, PASSWD)
         fri_server, operator_proc = self.__start_node('testnode00', key_storage)
         try:
-            if key_storage:
-                cert = key_storage.cert()
-                ckey = key_storage.cert_key()
-            else:
-                cert = ckey = None
-
-            fri_client = FriClient(bool(cert), cert, ckey)
+            fri_client = FriClient(key_storage)
 
             #sync call without binary
             resp = fri_client.call_sync('127.0.0.1:6666', FabnetPacketRequest(method='echo', \
                                         parameters={'message': 'hello, fabregas!'}))
-            self.assertEqual(resp.ret_code, RC_INVALID_CERT, resp.ret_message)
-            self.assertEqual(resp.ret_message, 'Certificate verification is failed!')
+            self.assertEqual(resp.ret_code, RC_AUTH_ERROR, resp.ret_message)
+            self.assertTrue('Certificate verification is failed!' in resp.ret_message)
         finally:
             fri_server.stop()
             operator_proc.stop()

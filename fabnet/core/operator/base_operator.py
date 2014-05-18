@@ -15,6 +15,8 @@ import copy
 import threading
 import traceback
 import time
+import hashlib
+import uuid
 from datetime import datetime, timedelta
 from Queue import Queue
 
@@ -24,7 +26,6 @@ from fabnet.utils.internal import total_seconds
 
 from fabnet.core.message_container import MessageContainer
 from fabnet.core.workers_manager import WorkersManager
-from fabnet.core.sessions_manager import SessionsManager
 from fabnet.core.operator.async_call_agent import FriAgent
 from fabnet.core.operator.neighbours_discovery import NeigboursDiscoveryRoutines
 from fabnet.core.constants import MC_SIZE
@@ -88,18 +89,14 @@ class Operator:
 
         self.start_datetime = datetime.now()
         self.is_init_node = is_init_node
-        self.__session_manager = SessionsManager(home_dir)
         self.__discovery = NeigboursDiscoveryRoutines(self)
         self.__api_workers_mgr = None
         self.__stat = Statistic()
         self.__allow_check_neighbours = threading.Event()
 
-        if key_storage:
-            cert = key_storage.cert()
-            ckey = key_storage.cert_key()
-        else:
-            cert = ckey = None
-        self.fri_client = FriClient(bool(cert), cert, ckey)
+        self.__auth_key = hashlib.sha256(str(uuid.uuid4())).hexdigest()
+
+        self.fri_client = FriClient(key_storage)
 
         self.__fri_agents_manager = WorkersManager(FriAgent, server_name=node_name, \
                     init_params=(self,))
@@ -116,6 +113,20 @@ class Operator:
         self.__null_oper_stat = init_oper_stat
 
         self.stopped = threading.Event()
+
+    def get_auth_key(self):
+        self.__lock.acquire()
+        try:
+            return self.__auth_key
+        finally:
+            self.__lock.release()
+
+    def set_auth_key(self, auth_key):
+        self.__lock.acquire()
+        try:
+            self.__auth_key = auth_key
+        finally:
+            self.__lock.release()
 
     def get_start_datetime(self):
         return self.start_datetime
@@ -530,12 +541,6 @@ class Operator:
         for neighbour in neighbours:
             self.__call_operation(neighbour, req)
 
-    def get_session(self, session_id):
-        return self.__session_manager.get(session_id)
-
-    def put_session(self, session_id, role):
-        return self.__session_manager.append(session_id, role)
-    
 
     def get_discovered_nodes(self):
         '''

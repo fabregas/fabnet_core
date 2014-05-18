@@ -44,11 +44,12 @@ class TestNodeStatistic(unittest.TestCase):
             packet_obj = FabnetPacketRequest(**packet)
 
             key_storage = init_keystore(VALID_STORAGE, PASSWD)
-            cert = key_storage.cert()
-            ckey = key_storage.cert_key()
-            client = FriClient(True, cert, ckey)
+            client = FriClient(key_storage)
+            self.assertEqual(client.get_session_id(), None)
 
             ret_packet = client.call_sync('127.0.0.1:1987', packet_obj)
+
+            self.assertNotEqual(client.get_session_id(), None)
             time.sleep(1.5)
             packet['parameters']['base_info'] = True
             packet_obj = FabnetPacketRequest(**packet)

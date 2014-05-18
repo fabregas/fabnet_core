@@ -29,7 +29,8 @@ class DiscoveryOperation(OperationBase):
         uppers = self.operator.get_neighbours(NT_UPPER)
         superiors = self.operator.get_neighbours(NT_SUPERIOR)
         return FabnetPacketResponse(ret_parameters={'uppers': uppers, \
-                'superiors': superiors, 'node': self.self_address})
+                'superiors': superiors, 'node': self.self_address, \
+                'auth_key': self.operator.get_auth_key()})
 
     def callback(self, packet, sender=None):
         """In this method should be implemented logic of processing
@@ -49,6 +50,8 @@ class DiscoveryOperation(OperationBase):
         node = packet.ret_parameters['node']
         uppers = packet.ret_parameters.get('uppers', [])
         superiors = packet.ret_parameters.get('superiors', [])
-
+        auth_key = packet.ret_parameters.get('auth_key', None)
+        if auth_key:
+            self.operator.set_auth_key(auth_key)
         self.operator.start_discovery_process(node, uppers, superiors)
 

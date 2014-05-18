@@ -12,7 +12,6 @@ import threading
 import traceback
 from fabnet.utils.logger import oper_logger as logger
 from fabnet.core.fri_base import FabnetPacketResponse
-from fabnet.core.fri_client import FriClient
 from fabnet.core.workers import ThreadBasedAbstractWorker
 from fabnet.core.constants import RC_OK, RC_DONT_STARTED
 

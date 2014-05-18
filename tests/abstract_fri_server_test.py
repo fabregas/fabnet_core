@@ -78,10 +78,7 @@ class TestAbstractFriServer(unittest.TestCase):
     def test01_workers_ssl(self):
         ks = KeyStorage(VALID_STORAGE, PASSWD)
         def call_methods():
-            cert = ks.cert()
-            ckey = ks.cert_key()
-
-            fri_client = FriClient(bool(cert), cert, ckey)
+            fri_client = FriClient(ks)
 
             resp = fri_client.call_sync('127.0.0.1:6666', FabnetPacketRequest(method='HelloFabregas'))
             self.assertEqual(resp.ret_code, 0, resp.ret_message)
@@ -131,10 +128,7 @@ class TestAbstractFriServer(unittest.TestCase):
 
         def stress_routine():
             def call_method():
-                cert = ks.cert()
-                ckey = ks.cert_key()
-
-                fri_client = FriClient(bool(cert), cert, ckey)
+                fri_client = FriClient(ks)
                 for i in xrange(1000):
                     resp = fri_client.call_sync('127.0.0.1:6666', FabnetPacketRequest(method='HelloFabregas'))
                     self.assertEqual(resp.ret_code, 0, resp.ret_message)

@@ -23,6 +23,8 @@ from constants import RC_OK, FRI_PROTOCOL_IDENTIFIER, FRI_PACKET_INFO_LEN, DEFAU
 class FriException(Exception):
     pass
 
+class FriAuthException(FriException):
+    pass
 
 class FriBinaryData:
     def chunks_count(self):

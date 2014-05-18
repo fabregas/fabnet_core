@@ -12,18 +12,26 @@ This module contains the implementation of FriClient class.
 """
 import socket
 import ssl
+import threading
 
-from constants import RC_ERROR, RC_UNEXPECTED, FRI_CLIENT_TIMEOUT, FRI_CLIENT_READ_TIMEOUT
+from constants import RC_ERROR, RC_AUTH_ERROR, FRI_CLIENT_TIMEOUT, FRI_CLIENT_READ_TIMEOUT
 
-from fri_base import FabnetPacket, FabnetPacketResponse, FriException
+from fri_base import FabnetPacket, FabnetPacketResponse, FriException, FriAuthException
 from socket_processor import SocketProcessor
 
 class FriClient:
     """class for calling asynchronous operation over FRI protocol"""
-    def __init__(self, is_ssl=None, cert=None, session_id=None):
-        self.is_ssl = is_ssl
-        self.certificate = cert
-        self.session_id = session_id
+    def __init__(self, key_storage=None):
+        self.__key_storage = key_storage
+        self.__session_id = None
+        self.__lock = threading.Lock()
+
+    def get_session_id(self):
+        self.__lock.acquire()
+        try:
+            return self.__session_id
+        finally:
+            self.__lock.release()
 
     def __int_call(self, node_address, packet, conn_timeout, read_timeout=None):
         proc = None
@@ -45,43 +53,44 @@ class FriClient:
             if not isinstance(packet, FabnetPacket):
                 raise Exception('FRI request packet should be an object of FabnetPacket')
 
-            packet.session_id = self.session_id
+            packet.session_id = self.__session_id
 
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(conn_timeout)
 
-            if self.is_ssl:
+            if self.__key_storage:
                 sock = ssl.wrap_socket(sock)
 
             sock.connect((hostname, port))
 
-            proc = SocketProcessor(sock, self.certificate)
+            proc = SocketProcessor(sock, self.__key_storage)
 
             sock.settimeout(read_timeout)
 
             resp = proc.send_packet(packet, wait_response=True)
 
+            if proc.get_session_id():
+                self.__lock.acquire()
+                try:
+                    self.__session_id = proc.get_session_id()
+                finally:
+                    self.__lock.release()
+
             return resp
+        except FriAuthException, err:
+            return FabnetPacketResponse(ret_code=RC_AUTH_ERROR, ret_message='[FriClient] %s' % err)
+        except Exception, err:
+            return FabnetPacketResponse(ret_code=RC_ERROR, ret_message='[FriClient][%s] %s' % (err.__class__.__name__, err))
         finally:
             if proc:
                 proc.close_socket()
 
 
     def call(self, node_address, packet, timeout=FRI_CLIENT_TIMEOUT):
-        try:
-            packet = self.__int_call(node_address, packet, timeout, FRI_CLIENT_READ_TIMEOUT)
-
-            return packet.ret_code, packet.ret_message
-        except Exception, err:
-            return RC_ERROR, '[FriClient][%s] %s' % (err.__class__.__name__, err)
-
+        packet = self.__int_call(node_address, packet, timeout, FRI_CLIENT_READ_TIMEOUT)
+        return packet.ret_code, packet.ret_message
 
     def call_sync(self, node_address, packet, timeout=FRI_CLIENT_TIMEOUT):
-        try:
-            packet.sync = True
-            packet = self.__int_call(node_address, packet, timeout, FRI_CLIENT_READ_TIMEOUT)
-
-            return packet
-        except Exception, err:
-            return FabnetPacketResponse(ret_code=RC_ERROR, ret_message='[FriClient][%s] %s' % (err.__class__.__name__, err))
-
+        packet.sync = True
+        packet = self.__int_call(node_address, packet, timeout, FRI_CLIENT_READ_TIMEOUT)
+        return packet
