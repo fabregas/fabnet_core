@@ -12,6 +12,8 @@ This module contains the Node class implementation
 """
 import os
 import time
+import uuid
+import hashlib
 import threading
 
 from fabnet.core.fri_server import FriServer
@@ -41,12 +43,12 @@ class Node:
         self.node_name = node_name
         self.node_type = node_type
         self.config = config
+        self.__auth_key = hashlib.sha1(str(uuid.uuid4())).hexdigest()
 
         config_file = os.path.join(home_dir, CONFIG_FILE_NAME)
         Config.load(config_file)
         self.config.update(Config.get_config_dict())
 
-        self.oper_client = OperatorClient(self.node_name)
         if ks_path:
             self.keystore = init_keystore(ks_path, ks_passwd)
             ca_files = self.keystore.autodetect_ca(home_dir)
@@ -66,6 +68,8 @@ class Node:
         self.operators_map = {'base': Operator}
         self.operators_map.update( PluginsManager.get_operators() )
 
+    def set_auth_key(self, auth_key):
+        self.__auth_key = auth_key
 
     def start(self, neighbour):
         address = '%s:%s' % (self.hostname, self.port)
@@ -81,11 +85,12 @@ class Node:
 
         operator_class.OPTYPE = self.node_type.lower()
         op_proc = OperatorProcess(operator_class, address, self.home_dir, self.keystore, \
-                                    is_init_node, self.node_name, config=self.config)
+                            is_init_node, self.node_name, authkey=self.__auth_key, config=self.config)
         op_proc.start_carefully()
 
         try:
-            oper_manager = OperationsManager(operator_class.OPERATIONS_LIST, self.node_name, self.keystore)
+            oper_manager = OperationsManager(operator_class.OPERATIONS_LIST, self.node_name, \
+                                        self.keystore, self.__auth_key)
             workers_mgr = WorkersManager(OperationsProcessor, server_name=self.node_name, \
                                             init_params=(oper_manager, self.keystore))
             fri_server = FriServer(self.bind_host, self.port, workers_mgr, self.node_name)
@@ -111,7 +116,8 @@ class Node:
         if is_init_node:
             neighbour = None
 
-        self.oper_client.discovery_neighbours(neighbour)
+        oper_client = OperatorClient(self.node_name, self.__auth_key)
+        oper_client.discovery_neighbours(neighbour)
 
 
     def stop(self):

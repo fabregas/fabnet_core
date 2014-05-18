@@ -45,6 +45,7 @@ from fabnet.operations.upgrade_node_operation import UpgradeNodeOperation
 from fabnet.operations.notify_operation import NotifyOperation
 from fabnet.operations.update_node_config import UpdateNodeConfigOperation
 from fabnet.operations.get_node_config import GetNodeConfigOperation
+from fabnet.operations.change_auth_key import ChangeAuthKeyOperation
 from fabnet.operations.topology_cognition import TOPOLOGY_DB
 from fabnet.utils.safe_json_file import SafeJsonFile
 from fabnet.utils.plugins import PluginsManager
@@ -53,7 +54,7 @@ from fabnet.operations.constants import NB_NORMAL, NB_MORE, NB_LESS, MNO_REMOVE
 
 OPERLIST = [ManageNeighbour, DiscoveryOperation, TopologyCognition, \
             NodeStatisticOperation, UpgradeNodeOperation, NotifyOperation, \
-            GetNodeConfigOperation, UpdateNodeConfigOperation]
+            GetNodeConfigOperation, UpdateNodeConfigOperation, ChangeAuthKeyOperation]
 
 NT_MAP = {NT_SUPERIOR: 'Superior', NT_UPPER: 'Upper'}
 
@@ -94,7 +95,7 @@ class Operator:
         self.__stat = Statistic()
         self.__allow_check_neighbours = threading.Event()
 
-        self.__auth_key = hashlib.sha256(str(uuid.uuid4())).hexdigest()
+        self.__auth_key = self.generate_auth_key()
 
         self.fri_client = FriClient(key_storage)
 
@@ -127,6 +128,9 @@ class Operator:
             self.__auth_key = auth_key
         finally:
             self.__lock.release()
+
+    def generate_auth_key(self): 
+        return hashlib.sha256(str(uuid.uuid4())).hexdigest()
 
     def get_start_datetime(self):
         return self.start_datetime

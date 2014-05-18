@@ -50,11 +50,11 @@ class Session:
 
 
 class OperationsManager:
-    def __init__(self, operations_classes, server_name, key_storage=None):
+    def __init__(self, operations_classes, server_name, key_storage=None, op_auth_key=None):
         self.__operations = {}
         self.__op_stat = None
 
-        self.operator_cl = OperatorClient(server_name)
+        self.operator_cl = OperatorClient(server_name, op_auth_key)
         self.__self_address = self.operator_cl.get_self_address()
         home_dir = self.operator_cl.get_home_dir()
 

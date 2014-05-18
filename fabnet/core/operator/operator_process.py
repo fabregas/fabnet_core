@@ -103,7 +103,7 @@ class OperatorClient:
 
 class OperatorProcess(mp.Process):
     def __init__(self, operator_class, self_address, home_dir, keystore, is_init_node, server_name='',\
-                    min_workers=MIN_WORKERS_COUNT, max_workers=MAX_WORKERS_COUNT, authkey='', config={}):
+                    min_workers=MIN_WORKERS_COUNT, max_workers=MAX_WORKERS_COUNT, authkey=None, config={}):
         mp.Process.__init__(self)
         self.__is_stopped = mp.Value("b", True, lock=mp.Lock())
         self.__status =  mp.Value("i", S_PENDING, lock=mp.Lock())

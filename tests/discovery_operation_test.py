@@ -5,6 +5,7 @@ import logging
 import threading
 import json
 import random
+from datetime import datetime
 from fabnet.utils.safe_json_file import SafeJsonFile
 from fabnet.core import constants
 constants.CHECK_NEIGHBOURS_TIMEOUT = 1
@@ -24,7 +25,7 @@ from fabnet.core.operator import OperatorClient
 NODES_COUNT = 5
 
 class TestServerThread(threading.Thread):
-    def __init__(self, port, neighbour=None, create_home=True):
+    def __init__(self, port, neighbour=None, create_home=True, auth_key=None):
         threading.Thread.__init__(self)
         self.port = port
         self.stopped = True
@@ -32,6 +33,7 @@ class TestServerThread(threading.Thread):
         self.config = {'CHECK_NEIGHBOURS_TIMEOUT': 1}
         self.recreate_home = create_home
         self.neighbour = neighbour
+        self.op_auth_key = auth_key
 
     def run(self):
         address = '127.0.0.1:%s'%self.port
@@ -44,6 +46,7 @@ class TestServerThread(threading.Thread):
 
         node = Node('127.0.0.1', self.port, home_dir, node_name,
                     ks_path=None, ks_passwd=None, node_type='BASE', config=self.config)
+        node.set_auth_key(self.op_auth_key)
 
         node.start(self.neighbour)
         self.node = node
@@ -66,20 +69,20 @@ class TestDiscoverytOperation(unittest.TestCase):
         server1 = server2 = server3 = None
         #os.system('rm /tmp/fabnet_topology.db')
         try:
-            server1 = TestServerThread(1986)
+            server1 = TestServerThread(1986, auth_key='123')
             server1.start()
-            server2 = TestServerThread(1987, '127.0.0.1:1986')
+            server2 = TestServerThread(1987, '127.0.0.1:1986', auth_key='234')
             time.sleep(1.5)
             server2.start()
-            server3 = TestServerThread(1988, '127.0.0.1:1986')
+            server3 = TestServerThread(1988, '127.0.0.1:1986', auth_key='432')
             time.sleep(1.5)
             server3.start()
 
             time.sleep(2.5)
 
-            operator = OperatorClient('node1986')
-            operator1 = OperatorClient('node1987')
-            operator2 = OperatorClient('node1988')
+            operator = OperatorClient('node1986', '123')
+            operator1 = OperatorClient('node1987', '234')
+            operator2 = OperatorClient('node1988', '432')
 
             self.assertEqual(sorted(operator.get_neighbours(NT_UPPER)), ['127.0.0.1:1987', '127.0.0.1:1988'])
             self.assertEqual(sorted(operator.get_neighbours(NT_SUPERIOR)), ['127.0.0.1:1987', '127.0.0.1:1988'])
@@ -88,10 +91,29 @@ class TestDiscoverytOperation(unittest.TestCase):
             self.assertEqual(sorted(operator2.get_neighbours(NT_UPPER)), ['127.0.0.1:1986', '127.0.0.1:1987'])
             self.assertEqual(sorted(operator2.get_neighbours(NT_SUPERIOR)), ['127.0.0.1:1986', '127.0.0.1:1987'])
 
+            auth_k = operator.get_auth_key()
+            auth_k1 = operator1.get_auth_key()
+            auth_k2 = operator2.get_auth_key()
+            self.assertEqual(auth_k, auth_k1)
+            self.assertEqual(auth_k1, auth_k2)
+            old_auth_key = auth_k
+
+            packet_obj = FabnetPacketRequest(method='ChangeAuthKey')
+            fri_client = FriClient()
+            addr = random.choice(['127.0.0.1:1986', '127.0.0.1:1987', '127.0.0.1:1988'])
+            fri_client.call(addr, packet_obj)
+            time.sleep(.5)
+            auth_k = operator.get_auth_key()
+            auth_k1 = operator1.get_auth_key()
+            auth_k2 = operator2.get_auth_key()
+            self.assertEqual(auth_k, auth_k1)
+            self.assertEqual(auth_k1, auth_k2)
+            self.assertNotEqual(auth_k, old_auth_key)
+
             server1.stop()
             server1.join()
             server1 = None
-            time.sleep(2)
+            time.sleep(1.5)
             self.assertEqual(operator1.get_neighbours(NT_UPPER), ['127.0.0.1:1988'])
             self.assertEqual(operator1.get_neighbours(NT_SUPERIOR), ['127.0.0.1:1988'])
             self.assertEqual(operator2.get_neighbours(NT_UPPER), ['127.0.0.1:1987'])
@@ -117,6 +139,32 @@ class TestDiscoverytOperation(unittest.TestCase):
                     server3.join()
             except Exception, err:
                 print 'ERROR while stopping server3: %s'%err
+
+
+    def __perf_op_auth(self, key):
+        server1 = None
+        try:
+            server1 = TestServerThread(1986, auth_key=key)
+            server1.start()
+            time.sleep(1)
+
+            operator = OperatorClient('node1986', key)
+            N = 10000
+            t0 = datetime.now()
+            for i in xrange(N):
+                hd = operator.get_home_dir()
+            print 'process with key=%s : %s'%(key, datetime.now() - t0)
+        finally:
+            try:
+                if server1:
+                    server1.stop()
+                    server1.join()
+            except Exception, err:
+                print 'ERROR while stopping server1: %s'%err
+
+    def __test_op_auth_perf(self):
+        self.__perf_op_auth(None)
+        self.__perf_op_auth('ee7551a1ff1ea42607c4383c68fd2214f1fec125')
 
     def test_topology_cognition(self):
         servers = []
