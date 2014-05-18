@@ -72,10 +72,9 @@ class OperationsManager:
     def set_operation_stat(self, op_stat):
         self.__op_stat = op_stat
 
-    def process(self, packet, role):
+    def process(self, packet):
         """process request fabnet packet
         @param packet - object of FabnetPacketRequest class
-        @param role - requestor role (None for disable auth)
         """
         t0 = None
         try:
@@ -97,8 +96,7 @@ class OperationsManager:
                 else:
                     raise Exception('Method "%s" does not implemented! Available methods: %s'%(packet.method, self.__operations.keys()))
 
-            operation_obj.check_role(role)
-            packet.role = role
+            operation_obj.check_role(packet.role)
 
             logger.debug('processing %s'%packet)
 

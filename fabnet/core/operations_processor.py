@@ -49,13 +49,15 @@ class OperationsProcessor(ProcessBasedFriWorker):
 
             if packet.is_request:
                 is_chunked = packet.binary_chunk_cnt > 0
-                role = self.check_session(socket_processor, packet.session_id, is_chunked)
+                cn, role = self.check_session(socket_processor, packet.session_id, is_chunked)
+                packet.role = role
+                packet.user_id = cn
 
             if not (packet.is_request and packet.sync):
                 socket_processor.close_socket(send_on_close=self.ok_packet)
 
             if packet.is_request:
-                ret_packet = self.oper_manager.process(packet, role)
+                ret_packet = self.oper_manager.process(packet)
 
                 try:
                     if not packet.sync:
@@ -94,7 +96,7 @@ class OperationsProcessor(ProcessBasedFriWorker):
         if not self._key_storage:
             if send_allow:
                 sock_proc.send_packet(FabnetPacketResponse())
-            return None
+            return None, None
 
         session = self.oper_manager.get_session(session_id)
         if session_id and session is None:
@@ -123,9 +125,9 @@ class OperationsProcessor(ProcessBasedFriWorker):
             session_id = self.oper_manager.create_session(cn, role)
             req_packet = FabnetPacketResponse(ret_code=RC_OK, ret_parameters={'session_id': session_id})
             sock_proc.send_packet(req_packet)
-            return role
+            return cn, role
 
         if send_allow:
             sock_proc.send_packet(FabnetPacketResponse())
-        return session.role
+        return session.cn, session.role
 
