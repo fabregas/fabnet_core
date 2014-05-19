@@ -16,7 +16,6 @@ import traceback
 from datetime import datetime, timedelta
 from multiprocessing import RLock
 
-from fabnet.utils.internal import total_seconds
 from fabnet.utils.logger import core_logger as logger
 from fabnet.core.fri_base import FabnetPacketResponse, serialize_binary_data
 from fabnet.core.operator import OperatorClient
@@ -52,7 +51,6 @@ class Session:
 class OperationsManager:
     def __init__(self, operations_classes, server_name, key_storage=None, op_auth_key=None):
         self.__operations = {}
-        self.__op_stat = None
 
         self.operator_cl = OperatorClient(server_name, op_auth_key)
         self.__self_address = self.operator_cl.get_self_address()
@@ -69,23 +67,16 @@ class OperationsManager:
             operation = op_class(self.operator_cl, self.__fri_client, self.__self_address, home_dir, lock)
             self.__operations[op_class.get_name()] = operation
 
-    def set_operation_stat(self, op_stat):
-        self.__op_stat = op_stat
-
     def process(self, packet):
         """process request fabnet packet
         @param packet - object of FabnetPacketRequest class
         """
-        t0 = None
         try:
             rcode = self.operator_cl.register_request(packet.message_id, packet.method, packet.sender)
             if rcode == RC_ALREADY_PROCESSED:
                 return
             if packet.method == KEEP_ALIVE_METHOD:
                 return FabnetPacketResponse(ret_code=rcode)
-
-            if self.__op_stat is not None:
-                t0 = datetime.now()
 
             operation_obj = self.__operations.get(packet.method, None)
             if operation_obj is None:
@@ -123,10 +114,6 @@ class OperationsManager:
             traceback.print_exc(file=logger)
             logger.error('[OperationsManager.process] %s'%err)
             return err_packet
-        finally:
-            if self.__op_stat is not None and t0:
-                dt = total_seconds(datetime.now()-t0)
-                self.__op_stat.update(packet.method, dt)
 
 
     def after_process(self, packet, ret_packet):
@@ -161,7 +148,7 @@ class OperationsManager:
             if sender:
                 #transit packet
                 self.send_to_sender(sender, packet)
-            return
+            return operation_name
 
         s_packet = None
         try:
@@ -173,6 +160,8 @@ class OperationsManager:
 
         if s_packet:
             self.send_to_sender(sender, packet)
+
+        return operation_name
 
     def send_to_sender(self, sender, packet):
         if sender is None:

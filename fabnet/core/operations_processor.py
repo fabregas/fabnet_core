@@ -13,7 +13,9 @@ This module contains the OperationsProcessor class implementation
 import uuid
 import traceback
 import threading
+from datetime import datetime, timedelta
 
+from fabnet.utils.internal import total_seconds
 from fabnet.utils.logger import oper_logger as logger
 from fabnet.core.fri_base import FabnetPacketResponse
 from fabnet.core.constants import RC_OK, RC_ERROR, RC_INVALID_CERT, \
@@ -34,7 +36,6 @@ class OperationsProcessor(ProcessBasedFriWorker):
         self.__op_stat = StatMap()
         cur_thread = threading.current_thread()
         thr_name = cur_thread.getName()
-        self.oper_manager.set_operation_stat(self.__op_stat)
 
         self.__stat_collector = StatisticCollector(self.oper_manager.operator_cl, SO_OPERS_TIME, \
                                         thr_name, self.__op_stat, STAT_COLLECTOR_TIMEOUT)
@@ -45,9 +46,14 @@ class OperationsProcessor(ProcessBasedFriWorker):
 
     def process(self, socket_processor):
         try:
+            method = None
             packet = socket_processor.recv_packet()
 
+            if self.__op_stat is not None:
+                t0 = datetime.now()
+
             if packet.is_request:
+                method = packet.method
                 is_chunked = packet.binary_chunk_cnt > 0
                 cn, role = self.check_session(socket_processor, packet.session_id, is_chunked)
                 packet.role = role
@@ -71,7 +77,8 @@ class OperationsProcessor(ProcessBasedFriWorker):
                 finally:
                     self.oper_manager.after_process(packet, ret_packet)
             else:
-                self.oper_manager.callback(packet)
+                method = self.oper_manager.callback(packet)
+                method = '%s_callback' % method
         except InvalidCertificate, err:
             if not socket_processor.is_closed():
                 err_packet = FabnetPacketResponse(ret_code=RC_INVALID_CERT, ret_message=str(err))
@@ -90,7 +97,9 @@ class OperationsProcessor(ProcessBasedFriWorker):
         finally:
             if socket_processor:
                 socket_processor.close_socket(force=True)
-
+            if self.__op_stat is not None and method:
+                dt = total_seconds(datetime.now()-t0)
+                self.__op_stat.update(method, dt)
 
     def check_session(self, sock_proc, session_id, send_allow=False):
         if not self._key_storage:
