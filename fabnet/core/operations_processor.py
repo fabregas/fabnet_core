@@ -78,7 +78,7 @@ class OperationsProcessor(ProcessBasedFriWorker):
                     self.oper_manager.after_process(packet, ret_packet)
             else:
                 method = self.oper_manager.callback(packet)
-                method = '%s_callback' % method
+                method = '%s.Callback' % method
         except InvalidCertificate, err:
             if not socket_processor.is_closed():
                 err_packet = FabnetPacketResponse(ret_code=RC_INVALID_CERT, ret_message=str(err))
