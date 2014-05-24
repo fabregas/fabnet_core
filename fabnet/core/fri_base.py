@@ -44,6 +44,13 @@ class FriBinaryData:
             data += chunk
         return data
 
+    def __iter__(self):
+        while True:
+            chunk = self.get_next_chunk()
+            if chunk is None:
+                return
+            yield chunk
+
     def close(self):
         pass
 
@@ -334,6 +341,30 @@ class FabnetPacketRequest(FabnetPacket):
         return '{%s}[%s][%s][%s]%s %s %s'%(self.message_id, self.sender, \
                     sync_s, cast_s, h_bin, self.method, str(self.parameters))
 
+    def str_get(self, p_name, default=None):
+        return self.__get_typed(p_name, str, default)
+
+    def int_get(self, p_name, default=None):
+        return self.__get_typed(p_name, int, default)
+
+    def bool_get(self, p_name, default=None):
+        def cast_func(val):
+            if type(val) == str:
+                return val.lower() == 'true'
+            return bool(val)
+        return self.__get_typed(p_name, cast_func, default)
+
+    def __get_typed(self, p_name, cast_func, default=None):
+        val = self.parameters.get(p_name, None)
+        if val is None:
+            if default is None:
+                raise FriException('Parameter "%s" does not found!'%p_name)
+            return default
+
+        try:
+            return cast_func(val)
+        except ValueError, err:
+            raise FriException('Invalid value for parameter "%s": "%s"'%(p_name, val))
 
 class FabnetPacketResponse(FabnetPacket):
     is_request = False

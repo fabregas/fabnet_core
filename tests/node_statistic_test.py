@@ -10,7 +10,7 @@ from datetime import datetime
 constants.CHECK_NEIGHBOURS_TIMEOUT = 1
 constants.STAT_COLLECTOR_TIMEOUT = 1
 constants.STAT_OSPROC_TIMEOUT = 1
-from fabnet.core.fri_base import FabnetPacketRequest, FabnetPacketResponse
+from fabnet.core.fri_base import FabnetPacketRequest, FabnetPacketResponse, FriException
 from fabnet.core.node import Node
 from fabnet.core.fri_client import FriClient
 from fabnet.core.operator import Operator
@@ -39,9 +39,21 @@ class TestNodeStatistic(unittest.TestCase):
 
             packet = {  'method': 'NodeStatistic',
                         'sender': '',
-                        'parameters': {'reset_op_stat': True},
+                        'parameters': {'reset_op_stat': True, 'test_val': '232eq'},
                         'sync': True}
             packet_obj = FabnetPacketRequest(**packet)
+
+            reset_op_stat = packet_obj.bool_get('reset_op_stat')
+            self.assertEqual(reset_op_stat, True)
+            self.assertEqual(packet_obj.bool_get('reset_op_stat2', False), False)
+            with self.assertRaises(FriException):
+                packet_obj.bool_get('reset_op_stat2')
+            self.assertEqual(packet_obj.int_get('reset_op_stat'), 1)
+            self.assertEqual(packet_obj.str_get('reset_op_stat'), 'True') 
+            with self.assertRaises(FriException):
+                packet_obj.int_get('test_val')
+            packet_obj.str_get('test_val')
+
 
             key_storage = init_keystore(VALID_STORAGE, PASSWD)
             client = FriClient(key_storage)
