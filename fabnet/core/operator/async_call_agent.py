@@ -33,9 +33,9 @@ class FriAgent(ThreadBasedAbstractWorker):
         if rcode == RC_OK:
             return
 
-        logger.error("Can't call async operation %s on %s. Details: %s"%\
+        logger.debug("Can't call async operation %s on %s. Details: %s"%\
             (getattr(packet, 'method', 'callback'), address, rmsg))
-        logger.debug('Failed packet: %s'%packet)
+        #logger.debug('Failed packet: %s'%packet)
         if packet.is_response:
             return
         ret_packet = FabnetPacketResponse(message_id=packet.message_id, \
@@ -45,6 +45,6 @@ class FriAgent(ThreadBasedAbstractWorker):
             rcode, rmsg = self.fri_client.call(self.self_address, ret_packet)
             if rcode == RC_OK:
                 return
-            logger.error("Can't send error response to self node")
+            logger.debug("Can't send error response to self node")
 
 
