@@ -91,7 +91,7 @@ class OperationBase:
         """
         pass
 
-    def _init_operation(self, node_address, operation, parameters, sync=False, binary_data=''):
+    def _init_operation(self, node_address, operation, parameters, sync=False, binary_data=None):
         """Initiate new operation"""
         if sync:
             req = FabnetPacketRequest(method=operation, sender=self.self_address, \
