@@ -65,7 +65,11 @@ class OperationsManager:
             logger.debug('registering %s operation class...'% op_class.__name__)
             lock = RLock()
             operation = op_class(self.operator_cl, self.__fri_client, self.__self_address, home_dir, lock)
+            operation.get_operation_object = self.__get_operation_object
             self.__operations[op_class.get_name()] = operation
+
+    def __get_operation_object(self, method):
+        return self.__operations.get(method, None)
 
     def process(self, packet):
         """process request fabnet packet
@@ -112,7 +116,6 @@ class OperationsManager:
                             ret_code=1, ret_message= '[OpPROC] %s'%err)
             logger.write = logger.debug
             traceback.print_exc(file=logger)
-            logger.error('[OperationsManager.process] %s'%err)
             return err_packet
 
 

@@ -91,6 +91,10 @@ class OperationBase:
         """
         pass
 
+    def get_operation_obect(self, method):
+        """return object of BaseOperation for method"""
+        pass
+
     def _init_operation(self, node_address, operation, parameters, sync=False, binary_data=None):
         """Initiate new operation"""
         if sync:
