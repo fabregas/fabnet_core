@@ -89,7 +89,7 @@ class ProcessBasedAbstractWorker(mp.Process):
 
         self.before_start()
 
-        logger.debug('worker is started!')
+        logger.info('worker is started!')
         while True:
             data = self.__queue.get()
             if data == STOP_WORKER_EVENT:

@@ -11,7 +11,40 @@ Copyright (C) 2011 Konstantin Andrusenko
 This module contains the fabnet logger initialization
 """
 import logging, logging.handlers
+import socket
 import sys
+
+class MultiprocessSysLogHandler(logging.handlers.SysLogHandler):
+    def _connect_unixsocket(self, address):
+        self.acquire()
+        try:
+            use_socktype = self.socktype
+            if use_socktype is None:
+                use_socktype = socket.SOCK_DGRAM
+            if getattr(self, 'socket', None):
+                self.socket.close()
+                self.socket = None
+            self.socket = socket.socket(socket.AF_UNIX, use_socktype)
+            try:
+                self.socket.connect(address)
+                # it worked, so set self.socktype to the used type
+                self.socktype = use_socktype
+            except socket.error, err:
+                self.socket.close()
+                if self.socktype is not None:
+                    # user didn't specify falling back, so fail
+                    raise
+                use_socktype = socket.SOCK_STREAM
+                self.socket = socket.socket(socket.AF_UNIX, use_socktype)
+                try:
+                    self.socket.connect(address)
+                    # it worked, so set self.socktype to the used type
+                    self.socktype = use_socktype
+                except socket.error, err:
+                    self.socket.close()
+                    raise
+        finally:
+            self.release()
 
 def init_logger(logger_name='localhost', to_console=True):
     logger = logging.getLogger(logger_name)
@@ -23,8 +56,7 @@ def init_logger(logger_name='localhost', to_console=True):
     else:
         log_path = '/dev/log'
 
-    hdlr = logging.handlers.SysLogHandler(address=log_path,
-              facility=logging.handlers.SysLogHandler.LOG_DAEMON)
+    hdlr = MultiprocessSysLogHandler(address=log_path, facility=logging.handlers.SysLogHandler.LOG_DAEMON)
     #formatter = logging.Formatter('%(filename)s: %(levelname)s: %(message)s')
 
     formatter = logging.Formatter('FABNET-%(name)s %(levelname)s [%(threadName)s] %(message)s')
