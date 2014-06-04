@@ -76,13 +76,14 @@ class OperationsManager:
         @param packet - object of FabnetPacketRequest class
         """
         try:
+            if packet.method == KEEP_ALIVE_METHOD:
+                rcode = self.operator_cl.process_keep_alive(packet.sender)
+                return FabnetPacketResponse(ret_code=rcode)
+
             if not packet.sync:
                 rcode = self.operator_cl.register_request(packet.message_id, packet.method, packet.sender)
                 if rcode == RC_ALREADY_PROCESSED:
                     return
-
-            if packet.method == KEEP_ALIVE_METHOD:
-                return FabnetPacketResponse(ret_code=rcode)
 
             operation_obj = self.__operations.get(packet.method, None)
             if operation_obj is None:

@@ -184,7 +184,7 @@ class Operator:
     def _unlock(self):
         self.__lock.release()
 
-    def _process_keep_alive(self, sender):
+    def process_keep_alive(self, sender):
         if sender not in self.get_neighbours(NT_UPPER):
             rcode = RC_NOT_MY_NEIGHBOUR
         else:
@@ -278,7 +278,7 @@ class Operator:
 
     def register_request(self, message_id, method, sender):
         if method == KEEP_ALIVE_METHOD:
-            return self._process_keep_alive(sender)
+            return self.process_keep_alive(sender)
 
         inserted = self.msg_container.put_safe(message_id,
                         {'operation': method,
