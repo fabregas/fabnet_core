@@ -106,7 +106,10 @@ class KeyStorage:
         for cert in certs:
             cert_o = X509.load_cert_string(cert)
             cert_name = cert_o.get_subject().OU
+            if not cert_name:
+                continue
             cls.__CA_CERTS[cert_name] = cert_o
+            cls.__CA_CERTS[None] = cert_o
 
     @classmethod
     def autodetect_ca(cls, path):
@@ -247,7 +250,7 @@ class KeyStorage:
         except Exception, err:
             raise Exception('verify_cert error: %s'%err)
 
-        cert_type = cert.get_subject().OU
+        cert_type = cert.get_issuer().OU
         ca_cert = self.__CA_CERTS.get(cert_type, None)
         if ca_cert is None:
             raise InvalidCertificate('Unknown certificate type: %s'%cert_type)
